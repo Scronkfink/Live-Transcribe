@@ -62,10 +62,10 @@ module.exports = {
     port: 8080, 
     proxy: {
       "/api": "http://localhost:3000",
-      "/socket.io": {
-        target: "http://localhost:3000",
-        ws: true
-      }
+      // "/socket.io": {
+      //   target: "http://localhost:3000",
+      //   ws: true
+      // }
     },
   },
 
