@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const transcriptionController = {};
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
 transcriptionController.transcribe = async (req, res, next) => {
   console.log("Received a file for transcription.");
@@ -17,10 +17,10 @@ transcriptionController.transcribe = async (req, res, next) => {
     return res.status(400).send('No file uploaded.');
   }
 
-  const filePath = path.join(__dirname, '..', file.path);
+  const filePath = path.join(__dirname, '..', 'uploads', file.filename);
   console.log(`File uploaded to: ${filePath}`);
 
-  exec(`whisperx ${filePath} --model large-v2 --compute_type int8 --output_dir ./output --output_format txt`, (error, stdout, stderr) => {
+  exec(`conda run -n whisperx whisperx ${filePath} --model large-v2 --compute_type int8 --output_dir ${path.join(__dirname, '..', 'output')} --output_format txt`, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error during transcription: ${error}`);
       console.error(`stderr: ${stderr}`);
@@ -31,7 +31,7 @@ transcriptionController.transcribe = async (req, res, next) => {
 
     const outputFilePath = path.join(__dirname, '..', 'output', `${path.parse(file.filename).name}.txt`);
     console.log(`Reading transcription result from: ${outputFilePath}`);
-    
+
     fs.readFile(outputFilePath, 'utf8', (err, data) => {
       if (err) {
         console.error(`Error reading output file: ${err}`);
