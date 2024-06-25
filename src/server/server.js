@@ -4,13 +4,12 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-const transcriptionController = require("../server/controllers/transcriptionController");
+const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../../dist')));
 
 app.use((req, res, next) => {
-  //swap origins with URLs, derp
   const allowedOrigins = ['https://ancestryai.xyz', 'http://localhost:8080'];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -21,10 +20,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/transcription', transcriptionController.transcribe, (req, res) => {
-  res.status(200).json(res.locals.transcription);
+app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
+  res.send({ transcription: res.locals.transcription });
 });
-
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../dist/index.html'));
