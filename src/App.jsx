@@ -30,6 +30,8 @@ const App = () => {
   const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragOver(false);
+
+    console.log("key: ", process.env.BASE_URL)
     
     const file = e.dataTransfer.files[0];
     const allowedTypes = ['audio/mp3', 'audio/wav','audio/mpeg'];
