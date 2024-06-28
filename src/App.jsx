@@ -5,6 +5,8 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
 import { PhotoIcon, UserCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 
+const baseURL = process.env.BASE_URL || "http://localhost:3000"
+
 const navigation = [
   { name: 'Product', href: '#' },
   { name: 'Features', href: '#' },
@@ -47,7 +49,7 @@ const App = () => {
     formData.append('file', file);
   
     try {
-      const response = await fetch('http://localhost:3000/api/transcription', {
+      const response = await fetch(`${baseURL}/api/transcription`, {
         method: 'POST',
         body: formData,
       });
@@ -68,7 +70,7 @@ const App = () => {
     //   a.click();
     //   a.remove();
     //   window.URL.revokeObjectURL(url);
-    
+
     } catch (error) {
       console.error('Error:', error);
       alert('Error: Failed to upload the file.');
