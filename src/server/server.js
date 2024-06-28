@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../../dist')));
 
 app.use((req, res, next) => {
-  const allowedOrigins = ['https://ancestryai.xyz', 'http://localhost:8080'];
+  const allowedOrigins = ['https://live-transcribe-38d0d2c8a46e.herokuapp.com', 'http://localhost:8080'];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
