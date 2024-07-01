@@ -50,7 +50,7 @@ twilioController.handleSubject = async (req, res) => {
   console.log("in twilioController.handleSubject; this is req.body: ", req.body)
 
   try {
-    const user = await User.findOne({ phoneNumber: callerPhoneNumber });
+    const user = await User.findOne({ phone: callerPhoneNumber });
     console.log('User found:', user);
 
     if (user) {
@@ -96,7 +96,7 @@ twilioController.handleTranscription = async (req, res) => {
   console.log("in twilioController.handleTranscription; this is req.body: ", req.body)
 
   try {
-    const user = await User.findOne({ phoneNumber: callerPhoneNumber });
+    const user = await User.findOne({ phone: callerPhoneNumber });
 
     if (user) {
       const transcription = user.transcriptions[user.transcriptions.length - 1];
