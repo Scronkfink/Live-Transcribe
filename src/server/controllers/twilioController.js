@@ -28,7 +28,6 @@ twilioController.handleVoice = async (req, res) => {
       });
     } else {
       twiml.say('Hello, I could not find your details. Please provide your name and email.');
-      // Optionally, add logic to record their name and email and update your database.
     }
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -50,7 +49,7 @@ twilioController.handleSubject = async (req, res) => {
     if (user) {
       const transcription = {
         email: user.email,
-        subject: recordingUrl, // Placeholder for recorded subject, ideally, you'd convert this to text using a service
+        subject: recordingUrl,
         body: ''
       };
 
@@ -63,7 +62,7 @@ twilioController.handleSubject = async (req, res) => {
         action: '/api/twilioTranscription',
         method: 'POST',
         transcribe: true,
-        maxLength: 600, // max 10 minutes
+        maxLength: 600,
         playBeep: true
       });
 
@@ -71,9 +70,11 @@ twilioController.handleSubject = async (req, res) => {
       res.send(twiml.toString());
     } else {
       console.error('User not found');
+      res.status(404).send('User not found');
     }
   } catch (error) {
     console.error('Error handling subject:', error);
+    res.status(500).send('Error handling subject');
   }
 };
 
@@ -91,7 +92,6 @@ twilioController.handleTranscription = async (req, res) => {
 
       await user.save();
 
-      // Configure the email transporter
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -100,7 +100,6 @@ twilioController.handleTranscription = async (req, res) => {
         }
       });
 
-      // Email options
       const mailOptions = {
         from: process.env.EMAIL,
         to: transcription.email,
@@ -108,7 +107,6 @@ twilioController.handleTranscription = async (req, res) => {
         text: transcription.body
       };
 
-      // Send the email
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           return console.log('Error sending email:', error);
@@ -117,21 +115,21 @@ twilioController.handleTranscription = async (req, res) => {
       });
     } else {
       console.error('User not found');
+      res.status(404).send('User not found');
     }
   } catch (error) {
     console.error('Error handling transcription:', error);
+    res.status(500).send('Error handling transcription');
   }
 
   res.send('Transcription received.');
 };
 
 twilioController.handleFallback = (req, res) => {
-  // Fallback logic here
   res.send('Fallback logic here');
 };
 
 twilioController.handleStatus = (req, res) => {
-  // Call status change handling logic here
   res.send('Call status change handling logic here');
 };
 
