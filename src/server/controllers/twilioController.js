@@ -45,47 +45,56 @@ twilioController.handleVoice = async (req, res) => {
 // Handle the recorded subject and route to the next controller
 twilioController.handleSubject = async (req, res) => {
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
-  const recordingUrl = req.body.RecordingUrl;
+  const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';
 
-  console.log("in twilioController.handleSubject; this is req.body: ", req.body)
-
+  console.log("In handleSubject controller; this is req.body: ", req.body);
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
-    console.log('User found:', user);
+    console.log("User found: ", user);
 
     if (user) {
       const transcription = {
         email: user.email,
-        subject: recordingUrl || 'No subject provided', // Placeholder for recorded subject
-        body: 'Pending transcription'
+        subject: recordingUrl, // Placeholder for recorded subject, ideally, you'd convert this to text using a service
+        body: 'Pending transcription' // Default value for body
       };
-
-      console.log('Transcription object:', transcription);
 
       user.transcriptions.push(transcription);
       await user.save();
-      console.log('User after saving transcription:', user);
 
       const twiml = new VoiceResponse();
-      twiml.say('Wonderful. I will go ahead and start transcribing your conversation as soon as you’re ready. Please start whenever you please.');
-      twiml.record({
-        action: '/api/twilioTranscription',
+      twiml.say('Wonderful. I will go ahead and start transcribing your conversation as soon as you’re ready. Press any key to start recording.');
+      twiml.gather({
+        action: '/api/startRecording',
         method: 'POST',
-        transcribe: true,
-        maxLength: 600, // max 10 minutes
-        playBeep: true
+        numDigits: 1,
+        timeout: 5 // Timeout in seconds for gathering the input
       });
 
       res.type('text/xml');
       res.send(twiml.toString());
     } else {
       console.error('User not found');
-      res.status(404).send('User not found');
     }
   } catch (error) {
     console.error('Error handling subject:', error);
-    res.status(500).send('Internal Server Error');
   }
+};
+
+twilioController.startRecording = (req, res) => {
+  const twiml = new VoiceResponse();
+  twiml.say('Please start speaking after the beep. Press any key when you are done.');
+  twiml.record({
+    action: '/api/twilioTranscription',
+    method: 'POST',
+    transcribe: true,
+    maxLength: 600, // max 10 minutes
+    playBeep: true,
+    finishOnKey: '*' // Press * to finish recording
+  });
+
+  res.type('text/xml');
+  res.send(twiml.toString());
 };
 
 // Handle the transcription and email sending
