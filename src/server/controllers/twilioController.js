@@ -53,7 +53,7 @@ twilioController.handleSubject = async (req, res) => {
       const transcription = {
         email: user.email,
         subject: recordingUrl || 'No subject provided', // Placeholder for recorded subject
-        body: '' // Placeholder for transcription body
+        body: '' 
       };
 
       console.log('Transcription object:', transcription);
