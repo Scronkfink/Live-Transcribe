@@ -31,18 +31,32 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/voice', twilioController.handleVoice);
-app.post('/api/fallback', twilioController.handleFallback);
-app.post('/api/recording', twilioController.handleRecording);
-app.post('/api/subject', twilioController.handleSubject);
-app.post('/api/twilioTranscription', twilioController.handleTranscription);
-app.post('/api/status', twilioController.handleStatus);
+app.post('/api/voice', twilioController.handleVoice, (req, res) => {
+  res.send({ message: 'Voice endpoint hit' });
+});
+app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
+  res.send({ message: 'Fallback endpoint hit' });
+});
+app.post('/api/recording', twilioController.handleRecording, (req, res) => {
+  res.send({ message: 'Recording endpoint hit' });
+});
+app.post('/api/subject', twilioController.handleSubject, (req, res) => {
+  res.send({ message: 'Subject endpoint hit' });
+});
+app.post('/api/twilioTranscription', twilioController.handleTranscription, (req, res) => {
+  res.send({ message: 'Transcription endpoint hit' });
+});
+app.post('/api/status', twilioController.handleStatus, (req, res) => {
+  res.send({ message: 'Status endpoint hit' });
+});
 
 app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
   res.send({ transcription: res.locals.transcription });
 });
 
-app.post("/api/user", userController.addUser);
+app.post("/api/user", userController.addUser, (req, res) => {
+  res.send({ message: 'User endpoint hit' });
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../dist/index.html'));
