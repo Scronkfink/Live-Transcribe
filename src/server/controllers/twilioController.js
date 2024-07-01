@@ -44,7 +44,7 @@ twilioController.handleVoice = async (req, res) => {
 
 // Handle the recorded subject and route to the next controller
 twilioController.handleSubject = async (req, res) => {
-  const callerPhoneNumber = req.body.From;
+  const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   const recordingUrl = req.body.RecordingUrl;
 
   console.log("in twilioController.handleSubject; this is req.body: ", req.body)
@@ -91,7 +91,7 @@ twilioController.handleSubject = async (req, res) => {
 // Handle the transcription and email sending
 twilioController.handleTranscription = async (req, res) => {
   const transcriptionText = req.body.TranscriptionText;
-  const callerPhoneNumber = req.body.From;
+  const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
   console.log("in twilioController.handleTranscription; this is req.body: ", req.body)
 
