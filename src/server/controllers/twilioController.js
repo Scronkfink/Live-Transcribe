@@ -15,6 +15,7 @@ twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From;
 
+  console.log("in twilioController.handleVoice; this is req.body: ", req.body)
   try {
     const user = await User.findOne({ phoneNumber: callerPhoneNumber });
 
