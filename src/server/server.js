@@ -23,7 +23,7 @@ app.use((req, res, next) => {
     'https://*.twilio.com',
   ];
   const origin = req.headers.origin;
-  if (allowedOrigins.some(allowedOrigin => origin.includes(allowedOrigin))) {
+  if (origin && allowedOrigins.some(allowedOrigin => origin.includes(allowedOrigin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
