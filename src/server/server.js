@@ -1,18 +1,27 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const mongoose = require('mongoose');
+const { twilioController } = require('./controllers/twilioController');
+const userController = require('./controllers/userController');
+const { upload, transcriptionController } = require('./controllers/transcriptionController');
+
 const app = express();
 const server = http.createServer(app);
-
-const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../../dist')));
 
+//CORS
 app.use((req, res, next) => {
-  const allowedOrigins = ['https://live-transcribe-38d0d2c8a46e.herokuapp.com', 'http://localhost:8080'];
+  const allowedOrigins = [
+    'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
+    'http://localhost:8080',
+    'https://*.twilio.com',
+  ];
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  if (allowedOrigins.some(allowedOrigin => origin.includes(allowedOrigin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
@@ -20,9 +29,15 @@ app.use((req, res, next) => {
   next();
 });
 
+app.post('/api/voice', twilioController.handleVoice);
+app.post('/api/fallback', twilioController.handleFallback);
+app.post('/api/status', twilioController.handleStatus);
+
 app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
   res.send({ transcription: res.locals.transcription });
 });
+
+app.post("/api/user", userController.addUser);
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../dist/index.html'));
@@ -32,3 +47,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+mongoose.connect(process.env.MONGODB_URI, {
+}).then(() => console.log('Connected to Database'))
+  .catch(err => console.error('Could not connect to MongoDB...', err));
