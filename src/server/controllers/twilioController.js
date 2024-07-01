@@ -135,4 +135,4 @@ twilioController.handleStatus = (req, res) => {
   res.send('Call status change handling logic here');
 };
 
-module.exports = { twilioController };
+module.exports = twilioController;
