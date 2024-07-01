@@ -5,7 +5,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const mongoose = require('mongoose');
-const { twilioController } = require('./controllers/twilioController');
+const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
 const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
