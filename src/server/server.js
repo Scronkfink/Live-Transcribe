@@ -12,8 +12,8 @@ const { upload, transcriptionController } = require('./controllers/transcription
 const app = express();
 const server = http.createServer(app);
 
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../../dist')));
 
 //CORS

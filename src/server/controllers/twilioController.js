@@ -13,7 +13,7 @@ const twilioController = {};
 // Handle incoming call and ask for the subject
 twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
-  const callerPhoneNumber = req.body.From;
+  const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
   console.log("in twilioController.handleVoice; this is req.body: ", req.body)
   try {
@@ -44,7 +44,7 @@ twilioController.handleSubject = async (req, res) => {
   const callerPhoneNumber = req.body.From;
   const recordingUrl = req.body.RecordingUrl;
 
-  console.log("In handleSubject controller; this is req.body: ", req.body)
+  console.log("in twilioController.handleSubject; this is req.body: ", req.body)
 
   try {
     const user = await User.findOne({ phoneNumber: callerPhoneNumber });
@@ -89,6 +89,8 @@ twilioController.handleSubject = async (req, res) => {
 twilioController.handleTranscription = async (req, res) => {
   const transcriptionText = req.body.TranscriptionText;
   const callerPhoneNumber = req.body.From;
+
+  console.log("in twilioController.handleTranscription; this is req.body: ", req.body)
 
   try {
     const user = await User.findOne({ phoneNumber: callerPhoneNumber });
