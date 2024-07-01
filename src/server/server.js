@@ -37,9 +37,7 @@ app.post('/api/voice', twilioController.handleVoice, (req, res) => {
 app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
   res.send({ message: 'Fallback endpoint hit' });
 });
-app.post('/api/recording', twilioController.handleRecording, (req, res) => {
-  res.send({ message: 'Recording endpoint hit' });
-});
+
 app.post('/api/subject', twilioController.handleSubject, (req, res) => {
   res.send({ message: 'Subject endpoint hit' });
 });
