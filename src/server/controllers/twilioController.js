@@ -16,8 +16,11 @@ twilioController.handleVoice = async (req, res) => {
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
   console.log("in twilioController.handleVoice; this is req.body: ", req.body)
+  console.log("Normalized phone number: ", callerPhoneNumber);
+
   try {
     const user = await User.findOne({ phoneNumber: callerPhoneNumber });
+    console.log("Database query result: ", user);
 
     if (user) {
       twiml.say(`Hello, ${user.name}. I'm here to work as your AI assistant on behalf of CopyTalk to offer you some audio transcription services. Would you mind telling me the subject of this conversation?`);
