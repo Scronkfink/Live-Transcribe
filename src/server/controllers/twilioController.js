@@ -43,18 +43,24 @@ twilioController.handleSubject = async (req, res) => {
   const callerPhoneNumber = req.body.From;
   const recordingUrl = req.body.RecordingUrl;
 
+  console.log("In handleSubject controller; this is req.body: ", req.body)
+
   try {
     const user = await User.findOne({ phoneNumber: callerPhoneNumber });
+    console.log('User found:', user);
 
     if (user) {
       const transcription = {
         email: user.email,
-        subject: recordingUrl,
-        body: ''
+        subject: recordingUrl || 'No subject provided', // Placeholder for recorded subject
+        body: '' // Placeholder for transcription body
       };
+
+      console.log('Transcription object:', transcription);
 
       user.transcriptions.push(transcription);
       await user.save();
+      console.log('User after saving transcription:', user);
 
       const twiml = new VoiceResponse();
       twiml.say('Wonderful. I will go ahead and start transcribing your conversation as soon as you’re ready. Please start whenever you please.');
@@ -62,7 +68,7 @@ twilioController.handleSubject = async (req, res) => {
         action: '/api/twilioTranscription',
         method: 'POST',
         transcribe: true,
-        maxLength: 600,
+        maxLength: 600, // max 10 minutes
         playBeep: true
       });
 
@@ -74,7 +80,7 @@ twilioController.handleSubject = async (req, res) => {
     }
   } catch (error) {
     console.error('Error handling subject:', error);
-    res.status(500).send('Error handling subject');
+    res.status(500).send('Internal Server Error');
   }
 };
 
