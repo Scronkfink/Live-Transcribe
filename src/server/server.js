@@ -31,6 +31,9 @@ app.use((req, res, next) => {
 
 app.post('/api/voice', twilioController.handleVoice);
 app.post('/api/fallback', twilioController.handleFallback);
+app.post('/api/recording', twilioController.handleRecording);
+app.post('/api/subject', twilioController.handleSubject);
+app.post('/api/twilioTranscription', twilioController.handleTranscription);
 app.post('/api/status', twilioController.handleStatus);
 
 app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
