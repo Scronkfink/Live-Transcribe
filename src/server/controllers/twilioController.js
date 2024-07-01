@@ -114,7 +114,7 @@ twilioController.handleTranscription = async (req, res) => {
       await user.save();
 
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        service: 'Yahoo',
         auth: {
           user: process.env.EMAIL,
           pass: process.env.PASSWORD
