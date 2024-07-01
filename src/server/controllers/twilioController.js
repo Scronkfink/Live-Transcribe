@@ -19,7 +19,7 @@ twilioController.handleVoice = async (req, res) => {
   console.log("Normalized phone number: ", callerPhoneNumber);
 
   try {
-    const user = await User.findOne({ phoneNumber: callerPhoneNumber });
+    const user = await User.findOne({ phone: callerPhoneNumber });
     console.log("Database query result: ", user);
 
     if (user) {
