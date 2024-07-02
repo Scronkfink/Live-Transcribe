@@ -34,7 +34,7 @@ const Splash = () => {
     setIsDragOver(false);
     
     const file = e.dataTransfer.files[0];
-    const allowedTypes = ['audio/mp3', 'audio/wav','audio/mpeg'];
+    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg'];
     const maxSize = 10 * 1024 * 1024; // 10MB
   
     if (!allowedTypes.includes(file.type)) {
@@ -51,6 +51,7 @@ const Splash = () => {
     formData.append('file', file);
   
     try {
+      
       const response = await fetch(`${baseURL}/api/transcription`, {
         method: 'POST',
         body: formData,
@@ -60,25 +61,24 @@ const Splash = () => {
         throw new Error('Network response was not ok');
       }
       
-      const result = await response.json()
-      console.log(result)
-
-    //   const blob = await response.blob();
-    //   const url = window.URL.createObjectURL(blob);
-    //   const a = document.createElement('a');
-    //   a.href = url;
-    //   a.download = 'transcription.txt';
-    //   document.body.appendChild(a);
-    //   a.click();
-    //   a.remove();
-    //   window.URL.revokeObjectURL(url);
-
+      const result = await response.json();
+      console.log(result);
+  
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'transcription.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+  
     } catch (error) {
       console.error('Error:', error);
       alert('Error: Failed to upload the file.');
     }
   };
-
 
 
 

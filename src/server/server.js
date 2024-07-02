@@ -56,7 +56,18 @@ app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
   res.send({ message: 'Fallback endpoint hit' });
 });
 
-app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
+const setAudioPath = (req, res, next) => {
+  if (req.file && req.file.path) {
+    res.locals.audioPath = req.file.path;
+    console.log(`File uploaded to: ${res.locals.audioPath}`);
+  } else {
+    console.error('No file uploaded.');
+    return res.status(400).send('No file uploaded.');
+  }
+  next();
+};
+
+app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptionController.transcribe, (req, res) => {
   res.send({ transcription: res.locals.transcription });
 });
 

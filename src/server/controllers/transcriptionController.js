@@ -16,7 +16,7 @@ const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
-transcriptionController.transcribe = async (req, res) => {
+transcriptionController.transcribe = async (req, res, next) => {
   const audioPath = res.locals.audioPath;
 
   if (!audioPath) {
@@ -24,9 +24,18 @@ transcriptionController.transcribe = async (req, res) => {
     return res.status(400).send('No audio file found.');
   }
 
+  // Check if the audio file exists
+  if (!fs.existsSync(audioPath)) {
+    console.error(`Audio file does not exist at: ${audioPath}`);
+    return res.status(400).send('Audio file does not exist.');
+  }
+
   console.log(`Transcribing audio file at: ${audioPath}`);
 
-  exec(`conda run -n whisperx whisperx ${audioPath} --model large-v2 --compute_type int8 --output_dir ${path.join(__dirname, '..', 'output')} --output_format txt`, (error, stdout, stderr) => {
+  const outputDir = path.join(__dirname, '..', 'output');
+  const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
+
+  exec(command, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error during transcription: ${error}`);
       console.error(`stderr: ${stderr}`);
@@ -35,7 +44,7 @@ transcriptionController.transcribe = async (req, res) => {
 
     console.log(`Transcription stdout: ${stdout}`);
 
-    const outputFilePath = path.join(__dirname, '..', 'output', `${path.parse(audioPath).name}.txt`);
+    const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
     const desktopPath = path.join(os.homedir(), 'Desktop');
     const desktopOutputPath = path.join(desktopPath, `${path.parse(audioPath).name}.txt`);
 
@@ -54,7 +63,7 @@ transcriptionController.transcribe = async (req, res) => {
         }
 
         console.log('Transcription successful and saved to desktop.');
-        next()
+        next();
       });
     });
   });
