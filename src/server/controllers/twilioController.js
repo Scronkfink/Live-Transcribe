@@ -91,15 +91,19 @@ twilioController.startRecording = (req, res) => {
     playBeep: true,
     finishOnKey: '*' // Press * to finish recording
   });
+  
+  twiml.say('Thank you, your transcription will be available shortly.');
+  twiml.hangup();
 
   res.type('text/xml');
   res.send(twiml.toString());
 };
 
 // Handle the recording completion and save the URL to the database
-twilioController.handleTranscription = async (req, res) => {
+twilioController.handleTranscription = async (req, res, next) => {
   const recordingUrl = req.body.RecordingUrl;
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
+  res.locals.number = callerPhoneNumber
 
   console.log("in twilioController.handleTranscription; this is req.body: ", req.body);
 
@@ -112,7 +116,7 @@ twilioController.handleTranscription = async (req, res) => {
 
       await user.save();
 
-      res.send('Recording URL saved successfully.');
+      next()
     } else {
       console.error('User not found');
       res.status(404).send('User not found');

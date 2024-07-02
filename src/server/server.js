@@ -44,8 +44,8 @@ app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
   res.send({ message: 'Start recording endpoint hit' });
 });
 
-app.post('/api/twilioTranscription', twilioController.handleTranscription, (req, res) => {
-  res.send({ message: 'Transcription endpoint hit' });
+app.post('/api/twilioTranscription', twilioController.handleTranscription, transcriptionController.getAudio, transcriptionController.transcribe, (req, res) => {
+  res.send({ message: 'Transcription downloaded' });
 });
 
 app.post('/api/status', twilioController.handleStatus, (req, res) => {
