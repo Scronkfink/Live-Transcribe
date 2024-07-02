@@ -97,7 +97,6 @@ twilioController.startRecording = (req, res) => {
   res.send(twiml.toString());
 };
 
-// Handle the transcription and email sending
 twilioController.handleTranscription = async (req, res) => {
   const transcriptionText = req.body.TranscriptionText;
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
@@ -130,9 +129,12 @@ twilioController.handleTranscription = async (req, res) => {
 
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
-          return console.log('Error sending email:', error);
+          console.error('Error sending email:', error);
+          res.status(500).send('Error sending email');
+        } else {
+          console.log('Email sent:', info.response);
+          res.send('Transcription and email sent successfully.');
         }
-        console.log('Email sent:', info.response);
       });
     } else {
       console.error('User not found');
@@ -142,8 +144,6 @@ twilioController.handleTranscription = async (req, res) => {
     console.error('Error handling transcription:', error);
     res.status(500).send('Error handling transcription');
   }
-
-  res.send('Transcription received.');
 };
 
 twilioController.handleFallback = (req, res) => {
