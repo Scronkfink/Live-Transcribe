@@ -15,7 +15,7 @@ twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
-  console.log("in twilioController.handleVoice; this is req.body: ", req.body)
+  console.log("in twilioController.handleVoice; this is req.body: ", req.body);
   console.log("Normalized phone number: ", callerPhoneNumber);
 
   try {
@@ -87,6 +87,7 @@ twilioController.startRecording = (req, res) => {
   twiml.record({
     action: '/api/twilioTranscription',
     method: 'POST',
+    transcribeCallback: '/api/transcriptionComplete',
     transcribe: true,
     maxLength: 600, // max 10 minutes
     playBeep: true,
@@ -97,11 +98,13 @@ twilioController.startRecording = (req, res) => {
   res.send(twiml.toString());
 };
 
-twilioController.handleTranscription = async (req, res) => {
+// Handle the transcription callback
+twilioController.transcriptionComplete = async (req, res) => {
   const transcriptionText = req.body.TranscriptionText;
+  const recordingUrl = req.body.RecordingUrl;
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
-  console.log("in twilioController.handleTranscription; this is req.body: ", req.body)
+  console.log("in twilioController.transcriptionComplete; this is req.body: ", req.body);
 
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
@@ -123,27 +126,25 @@ twilioController.handleTranscription = async (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL,
         to: transcription.email,
-        subject: transcription.subject,
+        subject: `Transcription for: ${transcription.subject}`,
         text: transcription.body
       };
 
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error('Error sending email:', error);
-          res.status(500).send('Error sending email');
         } else {
           console.log('Email sent:', info.response);
-          res.send('Transcription and email sent successfully.');
         }
       });
     } else {
       console.error('User not found');
-      res.status(404).send('User not found');
     }
   } catch (error) {
     console.error('Error handling transcription:', error);
-    res.status(500).send('Error handling transcription');
   }
+
+  res.send('Transcription processing completed.');
 };
 
 twilioController.handleFallback = (req, res) => {

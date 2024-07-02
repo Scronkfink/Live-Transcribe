@@ -35,22 +35,25 @@ app.use((req, res, next) => {
 app.post('/api/voice', twilioController.handleVoice, (req, res) => {
   res.send({ message: 'Voice endpoint hit' });
 });
-app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
-  res.send({ message: 'Fallback endpoint hit' });
+
+app.post('/api/subject', twilioController.handleSubject, (req, res) => {
+  res.send({ message: 'Subject endpoint hit' });
 });
 
 app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
   res.send({ message: 'Start recording endpoint hit' });
 });
 
-app.post('/api/subject', twilioController.handleSubject, (req, res) => {
-  res.send({ message: 'Subject endpoint hit' });
-});
-app.post('/api/twilioTranscription', twilioController.handleTranscription, (req, res) => {
+app.post('/api/twilioTranscription', twilioController.transcriptionComplete, (req, res) => {
   res.send({ message: 'Transcription endpoint hit' });
 });
+
 app.post('/api/status', twilioController.handleStatus, (req, res) => {
   res.send({ message: 'Status endpoint hit' });
+});
+
+app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
+  res.send({ message: 'Fallback endpoint hit' });
 });
 
 app.post('/api/transcription', upload.single('file'), transcriptionController.transcribe, (req, res) => {
