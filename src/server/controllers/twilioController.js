@@ -15,7 +15,7 @@ twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
-  console.log("in twilioController.handleVoice; this is req.body: ", req.body);
+  // console.log("In twilioController.handleVoice; this is req.body: ", req.body);
   console.log("Normalized phone number: ", callerPhoneNumber);
 
   try {
@@ -47,7 +47,7 @@ twilioController.handleSubject = async (req, res) => {
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';
 
-  console.log("In handleSubject controller; this is req.body: ", req.body);
+  // console.log("In handleSubject controller; this is req.body: ", req.body);
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
     console.log("User found: ", user);
