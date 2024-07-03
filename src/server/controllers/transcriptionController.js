@@ -16,62 +16,6 @@ const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
-transcriptionController.transcribe = async (req, res, next) => {
-  const audioPath = res.locals.audioPath;
-
-  if (!audioPath) {
-    console.error('No audio file found.');
-    return res.status(400).send('No audio file found.');
-  }
-
-  // Check if the audio file exists
-  if (!fs.existsSync(audioPath)) {
-    console.error(`Audio file does not exist at: ${audioPath}`);
-    return res.status(400).send('Audio file does not exist.');
-  }
-
-  console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
-
-  const outputDir = path.join(__dirname, '..', 'output');
-  const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
-
-  exec(command, (error, stdout, stderr) => {
-    console.log(`Command executed: ${command}`); // Log the command
-    if (error) {
-      console.error(`Error during transcription: ${error}`);
-      console.error(`stderr: ${stderr}`);
-      return res.status(500).send('Error during transcription.');
-    }
-
-    console.log(`Transcription stdout: ${stdout}`);
-    console.log(`Transcription stderr: ${stderr}`); // Log stderr
-
-    const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
-    const desktopPath = path.join(os.homedir(), 'Desktop');
-    const desktopOutputPath = path.join(desktopPath, `${path.parse(audioPath).name}.txt`);
-
-    console.log(`Reading transcription result from: ${outputFilePath}`);
-
-    fs.readFile(outputFilePath, 'utf8', (err, data) => {
-      if (err) {
-        console.error(`Error reading output file: ${err}`);
-        return res.status(500).send('Error reading transcription result.');
-      }
-
-      fs.writeFile(desktopOutputPath, data, (err) => {
-        if (err) {
-          console.error(`Error saving transcription to desktop: ${err}`);
-          return res.status(500).send('Error saving transcription to desktop.');
-        }
-
-        console.log('Transcription successful and saved to desktop.');
-        res.locals.transcription = data;
-        next();
-      });
-    });
-  });
-};
-
 transcriptionController.getAudio = async (req, res, next) => {
   console.log("In transcriptionController.getAudio; this is res.locals.number: ", res.locals.number);
 
@@ -131,6 +75,62 @@ transcriptionController.getAudio = async (req, res, next) => {
     console.error('Error fetching user or downloading audio:', error);
     res.status(500).send('Error processing request');
   }
+};
+
+transcriptionController.transcribe = async (req, res, next) => {
+  const audioPath = res.locals.audioPath;
+
+  if (!audioPath) {
+    console.error('No audio file found.');
+    return res.status(400).send('No audio file found.');
+  }
+
+  // Check if the audio file exists
+  if (!fs.existsSync(audioPath)) {
+    console.error(`Audio file does not exist at: ${audioPath}`);
+    return res.status(400).send('Audio file does not exist.');
+  }
+
+  console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
+
+  const outputDir = path.join(__dirname, '..', 'output');
+  const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
+
+  exec(command, (error, stdout, stderr) => {
+    console.log(`Command executed: ${command}`); // Log the command
+    if (error) {
+      console.error(`Error during transcription: ${error}`);
+      console.error(`stderr: ${stderr}`);
+      return res.status(500).send('Error during transcription.');
+    }
+
+    console.log(`Transcription stdout: ${stdout}`);
+    console.log(`Transcription stderr: ${stderr}`); // Log stderr
+
+    const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
+    const desktopPath = path.join(os.homedir(), 'Desktop');
+    const desktopOutputPath = path.join(desktopPath, `${path.parse(audioPath).name}.txt`);
+
+    console.log(`Reading transcription result from: ${outputFilePath}`);
+
+    fs.readFile(outputFilePath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Error reading output file: ${err}`);
+        return res.status(500).send('Error reading transcription result.');
+      }
+
+      fs.writeFile(desktopOutputPath, data, (err) => {
+        if (err) {
+          console.error(`Error saving transcription to desktop: ${err}`);
+          return res.status(500).send('Error saving transcription to desktop.');
+        }
+
+        console.log('Transcription successful and saved to desktop.');
+        res.locals.transcription = data;
+        next();
+      });
+    });
+  });
 };
 
 
