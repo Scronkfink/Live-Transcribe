@@ -30,12 +30,13 @@ transcriptionController.transcribe = async (req, res, next) => {
     return res.status(400).send('Audio file does not exist.');
   }
 
-  console.log(`Transcribing audio file at: ${audioPath}`);
+  console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
   const outputDir = path.join(__dirname, '..', 'output');
   const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
 
   exec(command, (error, stdout, stderr) => {
+    console.log(`Command executed: ${command}`); // Log the command
     if (error) {
       console.error(`Error during transcription: ${error}`);
       console.error(`stderr: ${stderr}`);
@@ -43,6 +44,7 @@ transcriptionController.transcribe = async (req, res, next) => {
     }
 
     console.log(`Transcription stdout: ${stdout}`);
+    console.log(`Transcription stderr: ${stderr}`); // Log stderr
 
     const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
     const desktopPath = path.join(os.homedir(), 'Desktop');
@@ -63,6 +65,7 @@ transcriptionController.transcribe = async (req, res, next) => {
         }
 
         console.log('Transcription successful and saved to desktop.');
+        res.locals.transcription = data;
         next();
       });
     });

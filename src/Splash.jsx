@@ -60,9 +60,6 @@ const Splash = () => {
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
-      
-      const result = await response.json();
-      console.log(result);
   
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
