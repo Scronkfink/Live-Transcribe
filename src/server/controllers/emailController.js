@@ -64,6 +64,46 @@ emailController.sendTranscript = async (req, res, next) => {
   return next();
 };
 
+emailController.uploadTranscript = async (req, res, next) => {
+  const email = res.locals.email;
+
+  if (!email) {
+    return next();
+  }
+
+  try {
+
+    // Read the HTML template and remove the userName placeholder
+    let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');
+    htmlContent = htmlContent.replace('{{userName}}', ''); // Remove userName placeholder
+
+    // Get the paths for txt document
+    const transcription = res.locals.outputFilePath;
+
+    // Create mail options
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: 'Your Transcription from Live-Transcribe', // Set the email subject
+      html: htmlContent,
+      attachments: [
+        {
+          filename: 'transcription.txt',
+          path: transcription,
+          contentType: 'text/plain'
+        }
+      ]
+    };
+
+    console.log('Sending email...');
+    await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully!');
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return next(error);
+  }
+  return next();
+}
 
 emailController.test = async (req, res, next) => {
   const email = "jacksonchanson@gmail.com";

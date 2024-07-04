@@ -2,9 +2,10 @@ import React from "react";
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 // import "./styles/app.css";
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
-import { ArrowUpTrayIcon } from '@heroicons/react/24/solid'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Popover, PopoverButton, PopoverPanel,Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
+import { ArrowUpTrayIcon, MusicalNoteIcon } from '@heroicons/react/24/solid'
+import { Bars3Icon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon } from '@heroicons/react/20/solid';
 
 const baseURL = process.env.BASE_URL
 
@@ -18,6 +19,10 @@ const navigation = [
 const Splash = () => {
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [file, setFile] = useState(null);
+  const [open, setOpen] = useState(true);
+  const [fileSent, setFileSent] = useState(false);
+
   const navigate = useNavigate();
 
   const handleDragOver = (e) => {
@@ -46,12 +51,31 @@ const Splash = () => {
       alert('Error: File size must be under 10MB.');
       return;
     }
+    
+    setFile(file);
+    return
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
   
+    if (!file) {
+      alert('Error: No file selected.');
+      return;
+    }
+    // Ensure 'file' is accessible here from state
     const formData = new FormData();
     formData.append('file', file);
   
+    const email = document.getElementById('submitEmail').value;
+    if (!email) {
+      alert('Error: Email is required.');
+      return
+    }
+    formData.append('email', email);
+    setFile(null);
+    setFileSent(true);
     try {
-      
       const response = await fetch(`${baseURL}/api/transcription`, {
         method: 'POST',
         body: formData,
@@ -229,13 +253,14 @@ const Splash = () => {
                   <input
                     type="email"
                     name="email"
-                    id="email"
+                    id="submitEmail"
                     className="block w-full rounded-md border-gray-300 py-3 text-base placeholder-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:flex-1"
                     placeholder="Enter your email"
                   />
                   <button
                     type="submit"
                     className="mt-3 w-full rounded-md border border-transparent bg-gray-800 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:mt-0 sm:inline-flex sm:w-auto sm:flex-shrink-0 sm:items-center"
+                    onClick={(handleSubmit)}
                   >
                     Send it!
                   </button>
@@ -244,6 +269,32 @@ const Splash = () => {
                   Our dog has aids. Please keep him in your thoughts.
                 </p>
               </div>
+
+              {fileSent && (
+  <div className="rounded-md bg-green-50 p-4">
+    <div className="flex">
+      <div className="flex-shrink-0">
+        <CheckCircleIcon aria-hidden="true" className="h-5 w-5 text-green-400" />
+      </div>
+      <div className="ml-3">
+        <p className="text-sm font-medium text-green-800">Successfully uploaded</p>
+      </div>
+      <div className="ml-auto pl-3">
+        <div className="-mx-1.5 -my-1.5">
+          <button
+            type="button"
+            className="inline-flex rounded-md bg-green-50 p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50"
+            onClick={() => setFileSent(false)}
+          >
+            <span className="sr-only">Dismiss</span>
+            <XMarkIcon aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
             </div>
             <div className="relative mt-12 sm:mx-auto sm:max-w-lg lg:col-span-6 lg:mx-0 lg:mt-0 lg:flex lg:max-w-none lg:items-center">
               <svg
@@ -281,18 +332,27 @@ const Splash = () => {
         onDrop={handleDrop}
       >
         <div className="text-center">
-          <ArrowUpTrayIcon className={`mx-auto h-40 w-12 ${isDragOver ? '[color:#99C24D]' : '[color:#603990]'}`} aria-hidden="true" />
-          <div className="mt-4 flex text-sm leading-6 text-gray-600">
-            <label
-              htmlFor="file-upload"
-              className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
-            >
-              <span>Upload a file</span>
-              <input id="file-upload" name="file-upload" type="file" className="sr-only" />
-            </label>
-            <p className="pl-1">or drag and drop</p>
-          </div>
-          <p className="text-xs leading-5 text-gray-600">MP3, WAV, GIF up to 10MB</p>
+        {file ? (
+  <div className="flex flex-col items-center">
+    <MusicalNoteIcon className="mx-auto h-40 w-12 text-gray-600" aria-hidden="true" />
+    <p className="-mt-12 text-sm text-gray-600">{file.name}</p>
+  </div>
+) : (
+  <>
+    <ArrowUpTrayIcon className={`mx-auto h-40 w-12 ${isDragOver ? '[color:#99C24D]' : '[color:#603990]'}`} aria-hidden="true" />
+    <div className="mt-4 flex text-sm leading-6 text-gray-600">
+      <label
+        htmlFor="file-upload"
+        className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
+      >
+        <span>Upload a file</span>
+        <input id="file-upload" name="file-upload" type="file" className="sr-only" />
+      </label>
+      <p className="pl-1">or drag and drop</p>
+    </div>
+    <p className="text-xs leading-5 text-gray-600">MP3, WAV, GIF up to 10MB</p>
+  </>
+)}
         </div>
       </div>
     </div>
