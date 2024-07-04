@@ -103,7 +103,7 @@ twilioController.startRecording = (req, res) => {
 twilioController.handleTranscription = async (req, res, next) => {
   const recordingUrl = req.body.RecordingUrl;
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
-  res.locals.number = callerPhoneNumber
+  res.locals.number = callerPhoneNumber;
 
   console.log("in twilioController.handleTranscription; this is req.body: ", req.body);
 
@@ -113,10 +113,18 @@ twilioController.handleTranscription = async (req, res, next) => {
     if (user) {
       const transcription = user.transcriptions[user.transcriptions.length - 1];
       transcription.audioUrl = recordingUrl;
-
       await user.save();
 
-      next()
+      // Create TwiML response to hang up the call immediately
+      const twiml = new VoiceResponse();
+      twiml.say('Thank you, your transcription will be available shortly.');
+      twiml.hangup();
+
+      res.type('text/xml');
+      res.send(twiml.toString());
+
+      // Proceed to the next middleware after sending the TwiML response
+      next();
     } else {
       console.error('User not found');
       res.status(404).send('User not found');
