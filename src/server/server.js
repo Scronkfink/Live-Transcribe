@@ -80,6 +80,23 @@ app.post("/api/email", emailController.test, (req, res) => {
   res.send({ message: 'Email Sent' });
 });
 
+app.get('/api/intro', (req, res) => {
+  const filePath = path.join(__dirname, 'voices', 'britishIntro.mp3');
+  res.sendFile(filePath);
+});
+
+app.get('/api/personalized/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'output', filename);
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error sending personalized message file:', err);
+      res.status(500).send('Error sending personalized message file');
+    }
+  });
+});
+
 app.post("/api/user", userController.addUser, (req, res) => {
   res.send({ message: 'User endpoint hit' });
 });
