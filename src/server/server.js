@@ -85,6 +85,21 @@ app.get('/api/intro', (req, res) => {
   res.sendFile(filePath);
 });
 
+app.get('/api/recording', (req, res) => {
+  const filePath = path.join(__dirname, 'voices', 'Recording.mp3');
+  res.sendFile(filePath);
+});
+
+app.get('/api/beep', (req, res) => {
+  const filePath = path.join(__dirname, 'voices', 'beep.mp3');
+  res.sendFile(filePath);
+});
+
+app.get('/api/end', (req, res) => {
+  const filePath = path.join(__dirname, 'voices', 'end.mp3');
+  res.sendFile(filePath);
+});
+
 app.get('/api/personalized/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(__dirname, 'output', filename);

@@ -94,7 +94,7 @@ twilioController.handleSubject = async (req, res) => {
       await user.save();
 
       const twiml = new VoiceResponse();
-      twiml.say('Wonderful. I will go ahead and start transcribing your conversation as soon as you’re ready. Press any key to start recording.');
+      twiml.play(`${process.env.SERVER_ADDRESS}/api/recording`);
       twiml.gather({
         action: '/api/startRecording',
         method: 'POST',
@@ -114,7 +114,7 @@ twilioController.handleSubject = async (req, res) => {
 
 twilioController.startRecording = (req, res) => {
   const twiml = new VoiceResponse();
-  twiml.say('Please start speaking after the beep. Press any key when you are done.');
+  twiml.play(`${process.env.SERVER_ADDRESS}/api/beep`);
   twiml.record({
     action: '/api/twilioTranscription',
     method: 'POST',
@@ -123,7 +123,7 @@ twilioController.startRecording = (req, res) => {
     finishOnKey: '*' // Press * to finish recording
   });
   
-  twiml.say('Thank you, your transcription will be available shortly.');
+  twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
   twiml.hangup();
 
   res.type('text/xml');
@@ -148,7 +148,7 @@ twilioController.handleTranscription = async (req, res, next) => {
 
       // Create TwiML response to hang up the call immediately
       const twiml = new VoiceResponse();
-      twiml.say('Thank you, your transcription will be available shortly.');
+      twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
       twiml.hangup();
 
       res.type('text/xml');
