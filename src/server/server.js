@@ -76,6 +76,10 @@ const setAudioPath = (req, res, next) => {
 //   res.send({ transcription: res.locals.transcription });
 // });
 
+app.post("/api/email", emailController.test, (req, res) => {
+  res.send({ message: 'Email Sent' });
+});
+
 app.post("/api/user", userController.addUser, (req, res) => {
   res.send({ message: 'User endpoint hit' });
 });

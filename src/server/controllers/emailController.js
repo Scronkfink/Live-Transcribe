@@ -28,9 +28,11 @@ emailController.sendTranscript = async (req, res, next) => {
 
     // Read the HTML template and replace placeholders
     let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');
-    htmlContent = htmlContent.replace('{{userName}}', user.name);
-    htmlContent = htmlContent.replace('{{pdfLink}}', res.locals.transcriptionPdfLink);
-    htmlContent = htmlContent.replace('{{wordLink}}', res.locals.transcriptionWordLink);
+    htmlContent = htmlContent.replace('{{userName}}', user);
+
+    // Get the paths for PDF and Word documents
+    const transcriptionPdfPath = res.locals.transcriptionPdfPath;
+    const transcriptionWordPath = res.locals.transcriptionWordPath;
 
     // Create mail options
     const mailOptions = {
@@ -38,6 +40,65 @@ emailController.sendTranscript = async (req, res, next) => {
       to: email,
       subject: subjectTranscriptionText, // Use the subject transcription as the email subject
       html: htmlContent,
+      attachments: [
+        {
+          filename: 'transcription.pdf',
+          path: transcriptionPdfPath,
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'transcription.docx',
+          path: transcriptionWordPath,
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+      ]
+    };
+
+    console.log('Sending email...');
+    await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully!');
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return next(error);
+  }
+  return next();
+};
+
+
+emailController.test = async (req, res, next) => {
+  const email = "jacksonchanson@gmail.com";
+  const user = "Jackson";
+
+  if (email === "") {
+    return next();
+  }
+
+  try {
+    // Read the HTML template and replace placeholders
+    let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');
+    htmlContent = htmlContent.replace('{{userName}}', user);
+
+    const transcriptionPdfPath = '/Users/hanson/Desktop/test.pdf';
+    const transcriptionWordPath = '/Users/hanson/Desktop/test.docx';
+
+    // Create mail options with attachments
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Sup dawg", // Use the subject transcription as the email subject
+      html: htmlContent,
+      attachments: [
+        {
+          filename: 'transcription.pdf',
+          path: transcriptionPdfPath,
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'transcription.docx',
+          path: transcriptionWordPath,
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+      ]
     };
 
     console.log('Sending email...');
@@ -50,5 +111,6 @@ emailController.sendTranscript = async (req, res, next) => {
 
   return next();
 };
+
 
 module.exports = emailController;

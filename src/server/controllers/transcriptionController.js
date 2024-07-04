@@ -4,8 +4,8 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 const multer = require('multer');
+const { convertTxtToPdf, convertTxtToWord } = require('./conversionUtils.js');
 const twilio = require('twilio');
-const { convertTxtToPdf, convertTxtToWord } = require('./conversionUtils');
 const User = require('../models/userModel.js');
 require('dotenv').config();
 
@@ -78,8 +78,8 @@ transcriptionController.getAudio = async (req, res, next) => {
             await convertTxtToWord(txtFilePath, docxFilePath);
 
             // Update links for email
-            res.locals.transcriptionPdfLink = `http://yourdomain.com/downloads/${path.basename(pdfFilePath)}`;
-            res.locals.transcriptionWordLink = `http://yourdomain.com/downloads/${path.basename(docxFilePath)}`;
+            res.locals.transcriptionPdfPath = pdfFilePath;
+            res.locals.transcriptionWordPath = docxFilePath;
 
             next();
           } catch (error) {
@@ -114,7 +114,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
     console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
     const outputDir = path.join(__dirname, '..', 'output');
-    const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
+    const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --language en --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
 
     exec(command, (error, stdout, stderr) => {
       console.log(`Command executed: ${command}`);
@@ -133,6 +133,5 @@ const transcribeAudio = (req, res, key, audioPath) => {
     });
   });
 };
-
 
 module.exports = { upload, transcriptionController };

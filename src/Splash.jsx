@@ -10,7 +10,7 @@ const baseURL = process.env.BASE_URL
 
 const navigation = [
   { name: 'Signup', href: '#' },
-  // { name: 'Features', href: '#' },
+  // { name: 'Email Test', href: '#' },
   // { name: 'Marketplace', href: '#' },
   // { name: 'Company', href: '#' },
 ]
@@ -77,7 +77,29 @@ const Splash = () => {
     }
   };
 
+  const emailTestClick = async (e) =>{
+    e.preventDefault();
 
+    console.log("email test triggered")
+    try {
+      const response = await fetch(`${baseURL}/api/email`, {
+        method: 'POST',
+        body: "sup",
+      });
+  
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+  
+      const result = await response.json()
+      console.log(result)
+  
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error: Failed to upload the file.');
+    }
+
+  };
 
   return (
     <div className="relative overflow-hidden bg-white">
@@ -135,6 +157,8 @@ const Splash = () => {
                 ))}
               </div>
             </div>
+
+            {/* <button onClick={emailTestClick}>email test</button> */}
 
           </nav>
 

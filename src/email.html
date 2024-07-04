@@ -14,6 +14,28 @@
     background-color: #ec0867 !important;
     border-color: #ec0867 !important;
   }
+
+  .button {
+    display: inline-block;
+    padding: 12px 24px;
+    margin: 0 10px;
+    font-family: Helvetica, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #0867ec;
+    border: solid 2px #0867ec;
+    border-radius: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .button:hover {
+    background-color: #ec0867 !important;
+    border-color: #ec0867 !important;
+  }
 }
 @media only screen and (max-width: 640px) {
   .main p,
@@ -95,59 +117,47 @@
           <div class="content" style="box-sizing: border-box; display: block; margin: 0 auto; max-width: 600px; padding: 0;">
 
             <!-- START CENTERED WHITE CONTAINER -->
-            <span class="preheader" style="color: transparent; display: none; height: 0; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all; visibility: hidden; width: 0;">This is preheader text. Some clients will show this text as a preview.</span>
+            <!-- <span class="preheader" style="color: transparent; display: none; height: 0; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all; visibility: hidden; width: 0;">This is preheader text. Some clients will show this text as a preview.</span> -->
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="main" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #ffffff; border: 1px solid #eaebed; border-radius: 16px; width: 100%;" width="100%">
 
               <!-- START MAIN CONTENT AREA -->
               <tr>
-                <td class="wrapper" style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; box-sizing: border-box; padding: 24px;" valign="top">
-                  <p style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">Howdy {{userName}},</p>
-                  <p style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">Please find your transcription available for secure download as a pdf or word document below.</p>
+                <td class="wrapper" style="font-family: 'Baskervville SC', Times New Roman, serif; font-size: 16px; vertical-align: top; box-sizing: border-box; padding: 24px;" valign="top">
+                  <p style="font-family: 'Baskervville SC', Times New Roman, serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px; font-weight: bold;">Howdy {{userName}},</p>
+                  <p style="font-family: 'Baskervville SC', Times New Roman, serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">We have attached both a PDF and a Word document of your transcription to this email. Thank you for choosing CopyTalk; we appreciate your business and look forward to serving you again.</p>
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; box-sizing: border-box; width: 100%; min-width: 100%;" width="100%">
                     <tbody>
-                      <tr>
-                        <td align="left" style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; padding-bottom: 16px;" valign="top">
-                          <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: auto;">
-                            <tbody>
-                              <div style="display: flex; justify-content: space-around; margin-top: 20px; width: 100%;">
-                                <a href="{{pdfLink}}" target="_blank" style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; border-radius: 4px; text-align: center; background-color: #0867ec; border: solid 2px #0867ec; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 16px; font-weight: bold; margin: 0; padding: 12px 24px; text-decoration: none; color: #ffffff;">Click here for .pdf</a>
-                                <a href="{{wordLink}}" target="_blank" style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; border-radius: 4px; text-align: center; background-color: #0867ec; border: solid 2px #0867ec; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 16px; font-weight: bold; margin: 0; padding: 12px 24px; text-decoration: none; color: #ffffff;">Click here for .word</a>
-                              </div>
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
+                      <p>
+                        
+                      </p>
                     </tbody>
                   </table>
-                  <!-- <p style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">This is a really simple email template. It's sole purpose is to get the recipient to click the button with no distractions.</p> -->
                   <img
-      width="75px"
-      style="border-radius: 0px; border: none solid #513a4a; width: 150px; margin-top: 20px;"
-      src="https://www.copytalk.com/ct/wp-content/uploads/2022/01/2022copytalklogo-1.png"
-    />
+                    width="75px"
+                    style="border-radius: 0px; border: none solid #513a4a; width: 150px; margin-top: 20px;"
+                    src="https://www.copytalk.com/ct/wp-content/uploads/2022/01/2022copytalklogo-1.png"
+                  />
                 </td>
               </tr>
-
               <!-- END MAIN CONTENT AREA -->
-              </table>
+            </table>
 
             <!-- START FOOTER -->
-            <div class="footer" style="clear: both; padding-top: 24px; text-align: center; width: 100%;">
+            <div class="footer" style="clear: both; padding-top: 15px; padding-bottom: 15px; text-align: center; width: 100%;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
                 <tr>
-                  <td class="content-block" style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 16px; text-align: center;" valign="top" align="center">
-                    <span class="apple-link" style="color: #9a9ea6; font-size: 16px; text-align: center;">Copytalk LLC, 500 Tallevast Rd. Ste 102 Sarasota, Fl 34243</span>
+                  <td class="content-block" style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 12px; text-align: center;" valign="top" align="center">
+                    <span class="apple-link" style="color: #9a9ea6; font-size: 12px; text-align: center;">Copytalk LLC, 500 Tallevast Rd. Ste 102 Sarasota, Fl 34243</span>
                     <br> 1-866-267-9825
                   </td>
                 </tr>
                 <tr>
-                  <td class="content-block powered-by" style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 16px; text-align: center;" valign="top" align="center">
-                    Powered by <a href="https://live-transcribe-38d0d2c8a46e.herokuapp.com/" style="color: #9a9ea6; font-size: 16px; text-align: center; text-decoration: underline;">LiveTranscribe</a>
+                  <td class="content-block powered-by" style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 12px; text-align: center;" valign="top" align="center">
+                    Powered by <a href="https://live-transcribe-38d0d2c8a46e.herokuapp.com/" style="color: #9a9ea6; font-size: 12px; text-align: center; text-decoration: underline;">LiveTranscribe</a>
                   </td>
                 </tr>
               </table>
             </div>
-
             <!-- END FOOTER -->
             
 <!-- END CENTERED WHITE CONTAINER --></div>
