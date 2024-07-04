@@ -72,9 +72,9 @@ const setAudioPath = (req, res, next) => {
   next();
 };
 
-// app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptionController.transcribe, (req, res) => {
-//   res.send({ transcription: res.locals.transcription });
-// });
+app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptionController.transcribe, emailController.uploadTranscript, (req, res) => {
+  res.send({ transcription: res.locals.transcription });
+});
 
 app.post("/api/email", emailController.test, (req, res) => {
   res.send({ message: 'Email Sent' });

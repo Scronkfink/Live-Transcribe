@@ -81,6 +81,16 @@ transcriptionController.getAudio = async (req, res, next) => {
             res.locals.transcriptionPdfPath = pdfFilePath;
             res.locals.transcriptionWordPath = docxFilePath;
 
+            // Delete the audio files from Twilio
+            const deleteRecording = async (url) => {
+              const recordingSid = url.split('/').pop().split('.')[0]; // Assuming the URL has the SID
+              await client.recordings(recordingSid).remove();
+              console.log(`Recording ${recordingSid} deleted successfully.`);
+            };
+
+            await deleteRecording(audioUrl);
+            await deleteRecording(subjectUrl);
+
             next();
           } catch (error) {
             console.error('Error downloading or transcribing audio file:', error);
@@ -134,4 +144,73 @@ const transcribeAudio = (req, res, key, audioPath) => {
   });
 };
 
+transcriptionController.transcribe = async (req, res, next) => {
+  const audioPath = res.locals.audioPath;
+  const email = req.body.email; // Assuming the email is sent in the form-data
+
+  if (!audioPath) {
+    console.error('No audio file found.');
+    return res.status(400).send('No audio file found.');
+  }
+
+  // Check if the audio file exists
+  if (!fs.existsSync(audioPath)) {
+    console.error(`Audio file does not exist at: ${audioPath}`);
+    return res.status(400).send('Audio file does not exist.');
+  }
+
+  if (!email) {
+    console.error('No email provided.');
+    return res.status(400).send('No email provided.');
+  }
+
+  res.locals.email = email; // Save the email to res.locals
+
+  console.log(`In transcriptionController.transcribe; TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
+
+  const outputDir = path.join(__dirname, '..', 'output');
+  const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
+
+  exec(command, (error, stdout, stderr) => {
+    console.log(`Command executed: ${command}`); // Log the command
+    if (error) {
+      console.error(`Error during transcription: ${error}`);
+      console.error(`stderr: ${stderr}`);
+      return res.status(500).send('Error during transcription.');
+    }
+
+    console.log(`Transcription stdout: ${stdout}`);
+    console.log(`Transcription stderr: ${stderr}`); // Log stderr
+
+    const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
+    const desktopPath = path.join(os.homedir(), 'Desktop');
+    const desktopOutputPath = path.join(desktopPath, `${path.parse(audioPath).name}.txt`);
+
+    console.log(`Reading transcription result from: ${outputFilePath}`);
+
+    fs.readFile(outputFilePath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Error reading output file: ${err}`);
+        return res.status(500).send('Error reading transcription result.');
+      }
+
+      fs.writeFile(desktopOutputPath, data, (err) => {
+        if (err) {
+          console.error(`Error saving transcription to desktop: ${err}`);
+          return res.status(500).send('Error saving transcription to desktop.');
+        }
+
+        console.log('Transcription successful and saved to desktop.');
+        res.locals.transcription = data;
+        res.locals.outputFilePath = outputFilePath; // Save the output file path to res.locals
+        next();
+      });
+    });
+  });
+};
+
+
 module.exports = { upload, transcriptionController };
+
+
+
