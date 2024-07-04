@@ -7,6 +7,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
+const emailController = require('./controllers/emailController');
 const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 const app = express();
@@ -32,6 +33,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/downloads', express.static(path.join(__dirname, 'output')));
+
 app.post('/api/voice', twilioController.handleVoice, (req, res) => {
   res.send({ message: 'Voice endpoint hit' });
 });
@@ -44,9 +47,11 @@ app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
   res.send({ message: 'Start recording endpoint hit' });
 });
 
-app.post('/api/twilioTranscription', twilioController.handleTranscription, transcriptionController.getAudio, transcriptionController.transcribe, (req, res) => {
-  res.send({ message: 'Transcription downloaded' });
-});
+app.post('/api/twilioTranscription', 
+  twilioController.handleTranscription, 
+  transcriptionController.getAudio,  
+  emailController.sendTranscript
+);
 
 app.post('/api/status', twilioController.handleStatus, (req, res) => {
   res.send({ message: 'Status endpoint hit' });
@@ -67,9 +72,9 @@ const setAudioPath = (req, res, next) => {
   next();
 };
 
-app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptionController.transcribe, (req, res) => {
-  res.send({ transcription: res.locals.transcription });
-});
+// app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptionController.transcribe, (req, res) => {
+//   res.send({ transcription: res.locals.transcription });
+// });
 
 app.post("/api/user", userController.addUser, (req, res) => {
   res.send({ message: 'User endpoint hit' });
