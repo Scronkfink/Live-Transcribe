@@ -3,3 +3,4 @@ src/server/uploads/
 src/server/output/
 /output
 .env
+src/server/voices/

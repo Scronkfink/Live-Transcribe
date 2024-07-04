@@ -1,8 +1,10 @@
-require('dotenv').config();
 const twilio = require('twilio');
-const nodemailer = require('nodemailer');
-const VoiceResponse = twilio.twiml.VoiceResponse;
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const User = require('../models/userModel.js');
+const VoiceResponse = twilio.twiml.VoiceResponse;
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -10,20 +12,49 @@ const client = twilio(accountSid, authToken);
 
 const twilioController = {};
 
-// Handle incoming call and ask for the subject
 twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
 
-  // console.log("In twilioController.handleVoice; this is req.body: ", req.body);
   console.log("Normalized phone number: ", callerPhoneNumber);
 
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
-    console.log("Database query result: ", user);
+    // console.log("Database query result: ", user);
 
     if (user) {
-      twiml.say(`Hello, ${user.name}. I'm here to work as your AI assistant on behalf of CopyTalk to offer you some audio transcription services. Would you mind telling me the subject of this conversation?`);
+      const preRecordedVoiceUrl = `${process.env.SERVER_ADDRESS}/api/intro`;
+
+      const message = `Hello, ${user.name}. I'm here to work as your AI assistant on behalf of CopyTalk to offer you some audio transcription services. Would you mind telling me the subject of this conversation?`;
+
+      const elevenLabsResponse = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/UDoSXdwuEuC59qu2AfUo', {
+        text: message,
+        model_id: 'eleven_turbo_v2',
+      }, {
+        headers: {
+          'xi-api-key': `${process.env.ELEVENLABS_API_KEY}`
+        },
+        responseType: 'arraybuffer'
+      });
+
+      const audioBuffer = Buffer.from(elevenLabsResponse.data, 'binary');
+      const outputDir = path.join(__dirname, '..', 'output');
+
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir);
+      }
+
+      const personalizedMessagePath = path.join(outputDir, `personalized-${user.phone}-${Date.now()}.mp3`);
+      console.log(`Saving personalized message to: ${personalizedMessagePath}`);
+
+      fs.writeFileSync(personalizedMessagePath, audioBuffer);
+
+      const personalizedMessageUrl = `${process.env.SERVER_ADDRESS}/api/personalized/${path.basename(personalizedMessagePath)}`;
+      console.log(`Personalized message URL: ${personalizedMessageUrl}`);
+
+      twiml.play(preRecordedVoiceUrl);
+      twiml.play(personalizedMessageUrl);
+
       twiml.record({
         action: '/api/subject',
         method: 'POST',
@@ -34,7 +65,7 @@ twilioController.handleVoice = async (req, res) => {
       twiml.say('Hello, I could not find your details. Please provide your name and email.');
     }
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching user or generating personalized message:', error);
     twiml.say('Sorry, there was an error processing your request. Please try again later.');
   }
 
