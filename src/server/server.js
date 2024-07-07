@@ -2,6 +2,7 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 const express = require('express');
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -32,6 +33,11 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   next();
 });
+
+const outputDir = path.join(__dirname, 'output');
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir);
+}
 
 app.use('/downloads', express.static(path.join(__dirname, 'output')));
 
@@ -102,7 +108,7 @@ app.get('/api/end', (req, res) => {
 
 app.get('/api/personalized/:filename', (req, res) => {
   const filename = req.params.filename;
-  const filePath = path.join(__dirname, 'output', filename);
+  const filePath = path.join(outputDir, filename);
 
   res.sendFile(filePath, (err) => {
     if (err) {
