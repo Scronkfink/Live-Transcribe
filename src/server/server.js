@@ -6,6 +6,7 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const mongoose = require('mongoose');
+const appServer = require('./appServer');
 const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
 const emailController = require('./controllers/emailController');
@@ -40,6 +41,8 @@ if (!fs.existsSync(outputDir)) {
 }
 
 app.use('/downloads', express.static(path.join(__dirname, 'output')));
+
+app.use('/app', appServer);
 
 app.post('/api/voice', twilioController.handleVoice, (req, res) => {
   res.send({ message: 'Voice endpoint hit' });
