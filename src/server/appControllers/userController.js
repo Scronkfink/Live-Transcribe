@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 userController.signIn = async (req, res) => {
   const { email, password } = req.body;
 
+  console.log("APP userController.signIn; this is req.body: ", req.body)
   try {
     // Find the user by email
     const user = await User.findOne({ email });
@@ -38,7 +39,14 @@ userController.signIn = async (req, res) => {
 };
 
 userController.signUp = async (req, res) => {
-  const { email, phone, password } = req.body;
+  let { email, phone, password, firstName } = req.body;
+
+  const name = firstName;
+
+  console.log("APP userController.signUp; this is req.body: ", req.body);
+
+  // Remove dashes from phone number
+  phone = phone.replace(/-/g, "");
 
   try {
     // Check if the user already exists
@@ -53,13 +61,14 @@ userController.signUp = async (req, res) => {
       email,
       phone,
       password, // Password will be hashed due to pre-save hook in the model
+      name 
     });
 
     // Save the user to the database
     await newUser.save();
-
+    console.log("APP user.controller.signUp; user added successfully");
     // Return success response
-    return res.status(201).json({ message: 'User successfully signed up', email: newUser.email, phone: newUser.phone });
+    return res.status(202).json({ message: 'User successfully signed up', email: newUser.email, phone: newUser.phone });
 
   } catch (error) {
     // Handle any errors that occur during the process
