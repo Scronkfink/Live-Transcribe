@@ -10,6 +10,6 @@ router.post('/signIn', userController.signIn);
 
 router.post('/signUp', userController.signUp);
 
-router.post('/transcribe', transcriptionController.test);
+router.post('/test', upload.single('file'), transcriptionController.test);
 
 module.exports = router;

@@ -25,7 +25,7 @@ userController.signIn = async (req, res) => {
     }
 
     // If the credentials are correct, return a success message along with user details
-    return res.status(200).json({
+    return res.status(202).json({
       message: 'Successfully signed in',
       email: user.email,
       phone: user.phone, // Assuming the user model has a phone field

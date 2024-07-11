@@ -16,24 +16,47 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
-
 transcriptionController.test = (req, res, next) => {
   const audioData = req.file; // Assuming the audio file is sent as 'file'
-  const audioPath = path.join(__dirname, 'uploads', audioData.originalname);
 
-  // Save the audio data to a file
-  fs.writeFile(audioPath, audioData.buffer, (err) => {
+  // Log the incoming file data
+  console.log("Received file:", audioData);
+
+  if (!audioData) {
+    res.status(400).send("No file uploaded");
+    return;
+  }
+
+  const uploadsDir = path.join(__dirname, 'uploads');
+  const audioPath = path.join(uploadsDir, audioData.originalname);
+
+  // Ensure the uploads directory exists
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Read the file from the temporary location and save it to the desired location
+  fs.readFile(audioData.path, (err, data) => {
+    if (err) {
+      console.error("Failed to read the uploaded file:", err);
+      res.status(500).send("Failed to read the uploaded file");
+      return;
+    }
+
+    fs.writeFile(audioPath, data, (err) => {
       if (err) {
-          console.error("Arrr, failed to save the audio data:", err);
-          res.status(500).send("Failed to save the audio data");
-          return;
+        console.error("Failed to save the audio data:", err);
+        res.status(500).send("Failed to save the audio data");
+        return;
       }
 
       // Log the file path
-      console.log(`YAR, the audio data be stored at: ${audioPath}`);
-      res.status(200).send(`Audio data be stored at: ${audioPath}`);
+      console.log(`Audio data stored at: ${audioPath}`);
+      res.status(200).send(`Audio data stored at: ${audioPath}`);
+    });
   });
 };
+
 
 transcriptionController.getAudio = async (req, res, next) => {
   console.log("In transcriptionController.getAudio; this is res.locals.number: ", res.locals.number);
