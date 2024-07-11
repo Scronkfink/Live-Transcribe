@@ -28,7 +28,8 @@ userController.signIn = async (req, res) => {
     return res.status(202).json({
       message: 'Successfully signed in',
       email: user.email,
-      phone: user.phone, // Assuming the user model has a phone field
+      phone: user.phone,
+      name: user.name // Assuming the user model has a phone field
     });
 
   } catch (error) {
@@ -68,7 +69,7 @@ userController.signUp = async (req, res) => {
     await newUser.save();
     console.log("APP user.controller.signUp; user added successfully");
     // Return success response
-    return res.status(202).json({ message: 'User successfully signed up', email: newUser.email, phone: newUser.phone });
+    return res.status(202).json({ message: 'User successfully signed up', email: newUser.email, phone: newUser.phone, name: newUser.name });
 
   } catch (error) {
     // Handle any errors that occur during the process
