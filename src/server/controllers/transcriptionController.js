@@ -64,6 +64,14 @@ transcriptionController.getAudio = async (req, res, next) => {
             res.locals.subjectPath = subjectPath;
             await transcribeAudio(req, res, 'subjectTranscription', subjectPath);
 
+            const subjectTxtFilePath = res.locals.subjectTranscription;
+            const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8');
+
+            await User.updateOne(
+            { phone: phoneNumber },
+            { $set: { "transcriptions.$[elem].subject": subjectData } },
+            { arrayFilters: [{ "elem.subject": subjectUrl }] }
+            );
             // Download and transcribe the other audio file
             const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
             res.locals.audioPath = audioPath;
@@ -71,6 +79,15 @@ transcriptionController.getAudio = async (req, res, next) => {
 
             // Convert .txt to PDF and Word
             const txtFilePath = res.locals.transcription;
+            const transcriptionData = fs.readFileSync(txtFilePath, 'utf8');
+
+            await User.updateOne(
+            { phone: phoneNumber },
+            { $set: { "transcriptions.$[elem].body": transcriptionData } },
+            { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
+            );
+
+            // Convert .txt to PDF and Word
             const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
             const docxFilePath = txtFilePath.replace('.txt', '.docx');
 
@@ -83,7 +100,7 @@ transcriptionController.getAudio = async (req, res, next) => {
 
             // Delete the audio files from Twilio
             const deleteRecording = async (url) => {
-              const recordingSid = url.split('/').pop().split('.')[0]; // Assuming the URL has the SID
+              const recordingSid = url.split('/').pop().split('.')[0];
               await client.recordings(recordingSid).remove();
               console.log(`Recording ${recordingSid} deleted successfully.`);
             };
@@ -96,7 +113,7 @@ transcriptionController.getAudio = async (req, res, next) => {
             console.error('Error downloading or transcribing audio file:', error);
             res.status(500).send('Error downloading or transcribing audio file');
           }
-        }, 5000); // 5-second delay
+        }, 5000); // 5-second delay to allow twillio to provide audio file
       } else {
         res.status(404).send('No audio URL or subject URL found for the latest transcription');
       }

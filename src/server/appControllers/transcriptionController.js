@@ -103,7 +103,13 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const outputDir = path.join(__dirname, '..', 'output');
     const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --language en --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
 
+    const startTime = Date.now();
+
     exec(command, (error, stdout, stderr) => {
+      const endTime = Date.now();
+      const transcriptionTime = (endTime - startTime) / 1000;
+
+      console.log(`ARR! Transcription be completed in ${transcriptionTime} seconds, matey!`);
       console.log(`Command executed: ${command}`);
       if (error) {
         console.error(`Error during transcription: ${error}`);

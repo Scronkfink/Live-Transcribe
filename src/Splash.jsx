@@ -37,10 +37,10 @@ const Splash = () => {
   const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+  
     const file = e.dataTransfer.files[0];
-    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg', 'audio/x-wav'];
+    const maxSize = 10 * 1024 * 1024; // 10MB  
   
     if (!allowedTypes.includes(file.type)) {
       alert('Error: Only .mp3 and .wav files are allowed.');
