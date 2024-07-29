@@ -1,3 +1,4 @@
+require('dotenv').config();
 const twilio = require('twilio');
 const axios = require('axios');
 const fs = require('fs');
@@ -14,19 +15,18 @@ const twilioController = {};
 
 twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
-  const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
+  const callerPhoneNumber = req.body.From.replace(/^\+1/, ''); // Normalize phone number
 
   console.log("Normalized phone number: ", callerPhoneNumber);
 
   try {
-    const user = await User.findOne({ phone: callerPhoneNumber });
-    // console.log("Database query result: ", user);
-
+    const user = await User.findOne({ phone: callerPhoneNumber }); // Fetch user by phone number
     if (user) {
-      const preRecordedVoiceUrl = `${process.env.SERVER_ADDRESS}/api/intro`;
+      const preRecordedVoiceUrl = `${process.env.SERVER_ADDRESS}/api/intro`; // Pre-recorded intro URL
 
       const message = `Hello, ${user.name}. I'm here to work as your AI assistant on behalf of CopyTalk to offer you some audio transcription services. Would you mind telling me the subject of this conversation?`;
 
+      // Call ElevenLabs API to generate a personalized message
       const elevenLabsResponse = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/UDoSXdwuEuC59qu2AfUo', {
         text: message,
         model_id: 'eleven_turbo_v2',
@@ -41,20 +41,22 @@ twilioController.handleVoice = async (req, res) => {
       const outputDir = path.join(__dirname, '..', 'output');
 
       if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir);
+        fs.mkdirSync(outputDir); // Create output directory if it doesn't exist
       }
 
       const personalizedMessagePath = path.join(outputDir, `personalized-${user.phone}-${Date.now()}.mp3`);
       console.log(`Saving personalized message to: ${personalizedMessagePath}`);
 
-      fs.writeFileSync(personalizedMessagePath, audioBuffer);
+      fs.writeFileSync(personalizedMessagePath, audioBuffer); // Save personalized message
 
       const personalizedMessageUrl = `${process.env.SERVER_ADDRESS}/api/personalized/${path.basename(personalizedMessagePath)}`;
       console.log(`Personalized message URL: ${personalizedMessageUrl}`);
 
+      // Play pre-recorded and personalized messages
       twiml.play(preRecordedVoiceUrl);
       twiml.play(personalizedMessageUrl);
 
+      // Record user response
       twiml.record({
         action: '/api/subject',
         method: 'POST',
@@ -62,18 +64,21 @@ twilioController.handleVoice = async (req, res) => {
         playBeep: true
       });
     } else {
+      // Handle case when user is not found
       twiml.say('Hello, I could not find your details. Please provide your name and email.');
     }
   } catch (error) {
+    // Handle errors
     console.error('Error fetching user or generating personalized message:', error);
     twiml.say('Sorry, there was an error processing your request. Please try again later.');
   }
 
+  // Send TwiML response
   res.type('text/xml');
   res.send(twiml.toString());
 };
 
-// Handle the recorded subject and route to the next controller
+
 twilioController.handleSubject = async (req, res) => {
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';

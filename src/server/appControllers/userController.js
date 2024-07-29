@@ -1,12 +1,14 @@
 const userController = {};
 const User = require('../models/userModel.js');
+const Session = require('../models/sessionModel.js');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 // Updated signIn function to check the user's credentials in the database
-userController.signIn = async (req, res) => {
+userController.signIn = async (req, res, next) => {
   const { email, password } = req.body;
 
-  console.log("APP userController.signIn; this is req.body: ", req.body)
+  console.log("APP userController.signIn; this is req.body: ", req.body);
   try {
     // Find the user by email
     const user = await User.findOne({ email });
@@ -24,13 +26,23 @@ userController.signIn = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // If the credentials are correct, return a success message along with user details
-    return res.status(202).json({
-      message: 'Successfully signed in',
-      email: user.email,
-      phone: user.phone,
-      name: user.name // Assuming the user model has a phone field
-    });
+    // Check for an existing valid session
+    const existingSession = await Session.findOne({ userId: user._id, expiresAt: { $gt: new Date() } });
+
+    if (existingSession) {
+      // If a valid session exists, skip 2FA
+      return res.status(202).json({
+        message: 'Successfully signed in without 2FA',
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+        sessionToken: existingSession.token // Include the session token in the response
+      });
+    }
+    console.log("APP user.controller.signIn; session not found.");
+    // Store the user's phone in res.locals and proceed to the next controller
+    res.locals.phone = user.phone;
+    next();
 
   } catch (error) {
     // Handle any errors that occur during the process
@@ -73,6 +85,7 @@ userController.signUp = async (req, res) => {
 
   } catch (error) {
     // Handle any errors that occur during the process
+
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
   }
