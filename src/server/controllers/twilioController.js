@@ -92,7 +92,8 @@ twilioController.handleSubject = async (req, res) => {
       const transcription = {
         email: user.email,
         subject: recordingUrl, // Placeholder for recorded subject, ideally, you'd convert this to text using a service
-        body: 'Pending transcription' // Default value for body
+        body: 'Pending transcription', // Default value for body
+        timestamp: new Date()
       };
 
       user.transcriptions.push(transcription);
