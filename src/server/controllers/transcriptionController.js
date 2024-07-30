@@ -94,6 +94,16 @@ transcriptionController.getAudio = async (req, res, next) => {
             await convertTxtToPdf(txtFilePath, pdfFilePath);
             await convertTxtToWord(txtFilePath, docxFilePath);
 
+            // Read the PDF file as binary data
+            const pdfData = fs.readFileSync(pdfFilePath);
+
+            // Update the user's transcription in the database with the PDF data
+            await User.updateOne(
+              { phone: phoneNumber },
+              { $set: { "transcriptions.$[elem].pdf": pdfData } },
+              { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
+            );
+
             // Update links for email
             res.locals.transcriptionPdfPath = pdfFilePath;
             res.locals.transcriptionWordPath = docxFilePath;
