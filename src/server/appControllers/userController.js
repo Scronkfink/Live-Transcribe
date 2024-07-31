@@ -2,6 +2,8 @@ const userController = {};
 const User = require('../models/userModel.js');
 const Session = require('../models/sessionModel.js');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 // Updated signIn function to check the user's credentials in the database
 userController.signIn = async (req, res, next) => {
@@ -114,6 +116,73 @@ userController.signUp = async (req, res) => {
   }
 };
 
+userController.createTranscription = async (req, res, next) => {
+  console.log("APP; in userController.createTranscription");
+  
+  const { email, subject, length } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const newTranscription = {
+      email: email,
+      subject: subject,
+      length: Math.floor(length),
+      timestamp: new Date(),
+      completed: false
+    };
+
+    user.transcriptions.push(newTranscription);
+    await user.save();
+
+    console.log(`New transcription added for user: ${email}`);
+    next()
+  } catch (error) {
+    console.error('Error creating transcription:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.uploadTranscription = async (req, res, next) => {
+  console.log("APP; in userController.uploadTranscription");
+
+  const { email, subject } = req.body;
+  const pdfFilePath = res.locals.transcriptionPdfPath;
+
+  try {
+    const user = await User.findOne({ email, "transcriptions.subject": subject });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const transcription = user.transcriptions.find(transcription => transcription.subject === subject);
+
+    if (!transcription) {
+      return res.status(404).json({ message: 'Transcription not found' });
+    }
+
+    const pdfBuffer = fs.readFileSync(pdfFilePath);
+    const pdfSize = (pdfBuffer.length / 1024).toFixed(2); // Calculate PDF size in KB
+
+    transcription.pdf = pdfBuffer;
+    transcription.pdfSize = `${pdfSize} KB`; // Set the pdfSize property
+    transcription.completed = true;
+
+    await user.save();
+
+    console.log(`Transcription updated with PDF and marked as completed for user: ${email}`);
+    next();
+  } catch (error) {
+    console.error('Error uploading transcription:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 userController.getTranscriptions = async (req, res) => {
   const { email } = req.body;
 
@@ -126,14 +195,12 @@ userController.getTranscriptions = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Extract the subjects, timestamps, and size of the body of each transcription
+    // Extract the subjects, timestamps, and size of the PDF of each transcription
     const transcriptions = user.transcriptions.map(transcription => {
-      const sizeInBytes = Buffer.byteLength(transcription.body || '', 'utf8');
-      const sizeInKB = (sizeInBytes / 1024).toFixed(2); // Convert to KB and format to 2 decimal places
       return {
         subject: transcription.subject,
         date: transcription.timestamp, // Include the timestamp as the date
-        size: `${sizeInKB} KB` // Display size in KB
+        size: transcription.pdfSize // Use the pre-calculated pdfSize
       };
     });
 
@@ -148,6 +215,9 @@ userController.getTranscriptions = async (req, res) => {
 };
 
 userController.getPDF = async (req, res) => {
+
+  console.log("APP; in userController.getPDF; this is req.body: ", req.body);
+  
   const { email, subject } = req.body;
 
   try {
@@ -178,7 +248,7 @@ userController.getPDF = async (req, res) => {
 
   } catch (error) {
     // Handle any errors that occur during the process
-    console.error(error);
+    console.error('Error fetching PDF:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 };

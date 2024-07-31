@@ -266,7 +266,7 @@ const Splash = () => {
                   </button>
                 </form>
                 <p className="mt-3 text-sm text-gray-500">
-                  Our dog has aids. Please keep him in your thoughts.
+                All 2FA and account updates provided from: (877) 899-6427
                 </p>
               </div>
 
