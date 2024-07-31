@@ -8,7 +8,7 @@ const twilioController = require('./appControllers/twilioController.js');
 
 router.post('/signIn', userController.signIn, twilioController.twoFactor);
 router.post('/signUp', userController.signUp);
-router.post('/test', upload.single('file'), transcriptionController.test, transcriptionController.transcribe, emailController.sendTranscript);
+router.post('/test', upload.single('file'), transcriptionController.test, userController.createTranscription, transcriptionController.transcribe, userController.uploadTranscription, emailController.sendTranscript);
 
 router.post('/getTranscriptions', userController.getTranscriptions);
 router.post('/getPDF', userController.getPDF);

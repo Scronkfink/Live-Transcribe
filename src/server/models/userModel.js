@@ -7,7 +7,10 @@ const transcriptionSchema = new mongoose.Schema({
   body: { type: String, required: false },
   audioUrl: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
-  pdf: { type: Buffer, required: false } 
+  pdf: { type: Buffer, required: false },
+  pdfSize: { type: String, required: false},
+  length: {type: String, required: false},
+  completed: {type: Boolean, required: false}
 });
 
 const userSchema = new mongoose.Schema({

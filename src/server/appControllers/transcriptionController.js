@@ -48,8 +48,6 @@ transcriptionController.test = (req, res, next) => {
       res.locals.email = email;
       res.locals.phone = phone;
       res.locals.user = name;
-
-      res.status(200).send("Your audio file has been received and will be transcribed shortly.");
       next();
     });
   });
