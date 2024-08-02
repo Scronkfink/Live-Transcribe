@@ -184,6 +184,8 @@ userController.uploadTranscription = async (req, res, next) => {
 };
 
 userController.getTranscriptions = async (req, res) => {
+
+  console.log("APP; in userController.getTranscriptions; this is req.body: ", req.body)
   const { email } = req.body;
 
   try {
@@ -197,14 +199,23 @@ userController.getTranscriptions = async (req, res) => {
 
     // Extract the subjects, timestamps, and size of the PDF of each transcription
     const transcriptions = user.transcriptions.map(transcription => {
+      // Convert length from seconds to "MM:SS" format
+      const lengthInSeconds = transcription.length;
+      const minutes = Math.floor(lengthInSeconds / 60);
+      const seconds = lengthInSeconds % 60;
+      const formattedLength = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
       return {
-        subject: transcription.subject,
-        date: transcription.timestamp, // Include the timestamp as the date
-        size: transcription.pdfSize // Use the pre-calculated pdfSize
+          subject: transcription.subject,
+          date: transcription.timestamp.toISOString().split('T')[0],
+          size: transcription.pdfSize || "pending",
+          length: formattedLength,
+          completed: transcription.completed
       };
-    });
+  });
 
     // Send the transcriptions back as a response
+    console.log("APP; in userController.getTranscriptions; this is response: ", transcriptions)
     res.status(202).json({ transcriptions });
 
   } catch (error) {
@@ -250,6 +261,30 @@ userController.getPDF = async (req, res) => {
     // Handle any errors that occur during the process
     console.error('Error fetching PDF:', error);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.deleteTranscription = async (req, res) => {
+  try {
+      const { email, subject } = req.body;
+
+      // Find the user by email
+      let user = await User.findOne({ email: email });
+
+      if (!user) {
+          return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove the transcription with the given subject
+      user.transcriptions = user.transcriptions.filter(transcription => transcription.subject !== subject);
+
+      // Save the updated user
+      await user.save();
+
+      res.status(200).json({ success: true, message: "Transcription deleted successfully" });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
   }
 };
 
