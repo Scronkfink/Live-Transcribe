@@ -42,25 +42,25 @@ userController.signIn = async (req, res, next) => {
     }
 
     // Bypass Twilio 2FA for specific email
-    if (email === "jacksonchanson@gmail.com") {
-      const sessionToken = generateSessionToken(); // Generate a session token
-      const session = new Session({
-        userId: user._id,
-        token: sessionToken,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
-      });
-      await session.save();
+    // if (email === "jacksonchanson@gmail.com") {
+    //   const sessionToken = generateSessionToken(); // Generate a session token
+    //   const session = new Session({
+    //     userId: user._id,
+    //     token: sessionToken,
+    //     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
+    //   });
+    //   await session.save();
       
-      return res.status(202).json({
-        message: 'Successfully signed in without 2FA',
-        email: user.email,
-        phone: user.phone,
-        name: user.name,
-        sessionToken: sessionToken // Include the session token in the response
-      });
-    }
+    //   return res.status(202).json({
+    //     message: 'Successfully signed in without 2FA',
+    //     email: user.email,
+    //     phone: user.phone,
+    //     name: user.name,
+    //     sessionToken: sessionToken // Include the session token in the response
+    //   });
+    // }
 
-    console.log("APP user.controller.signIn; session not found.");
+    console.log("APP user.controller.signIn; session not found. Procceeding to 2fa");
     // Store the user's phone in res.locals and proceed to the next controller
     res.locals.phone = user.phone;
     next();
@@ -74,7 +74,51 @@ userController.signIn = async (req, res, next) => {
 
 function generateSessionToken() {
   return require('crypto').randomBytes(64).toString('hex');
-}
+};
+
+userController.authenticate = async (req, res) => {
+
+  console.log("APP; in userController.authenticate; this is req.body: ", req.body)
+  const { email, code } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // If the user is not found, return an error
+      return res.status(401).json({ message: 'Invalid email or code' });
+    }
+
+    // Check if the provided code matches the stored 2FA code and is not expired
+    if (user.twoFactorCode === code && user.twoFactorExpires > Date.now()) {
+      // Clear the 2FA code and expiration from the user's record
+      user.twoFactorCode = null;
+      user.twoFactorExpires = null;
+      await user.save();
+
+      // Generate a session token
+      const sessionToken = generateSessionToken();
+      const session = new Session({
+        userId: user._id,
+        token: sessionToken,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
+      });
+      await session.save();
+
+      return res.status(200).json({
+        message: '2FA verification successful',
+        sessionToken: sessionToken // Include the session token in the response
+      });
+    } else {
+      // If the code does not match or is expired, return an error
+      return res.status(401).json({ message: 'Invalid email or code' });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
 
 userController.signUp = async (req, res) => {
   let { email, phone, password, firstName } = req.body;

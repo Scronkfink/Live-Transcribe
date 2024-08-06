@@ -7,6 +7,7 @@ const emailController = require('./appControllers/emailController.js');
 const twilioController = require('./appControllers/twilioController.js');
 
 router.post('/signIn', userController.signIn, twilioController.twoFactor);
+router.post('/authentication', userController.authenticate)
 router.post('/signUp', userController.signUp);
 router.post('/test', upload.single('file'), transcriptionController.test, userController.createTranscription, transcriptionController.transcribe, userController.uploadTranscription, emailController.sendTranscript);
 router.post("/deleteTranscription", userController.deleteTranscription);
