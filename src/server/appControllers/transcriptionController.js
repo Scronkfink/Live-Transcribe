@@ -16,9 +16,6 @@ transcriptionController.test = (req, res, next) => {
   const { email, phone, name } = req.body;
 
   console.log("APP, transcriptionController.test; this is req.body: ", req.body);
-  console.log("Received file:", audioData);
-  console.log("Received email:", email);
-  console.log("Received phone:", phone);
 
   if (!audioData) {
     return res.status(400).send("No file uploaded");
