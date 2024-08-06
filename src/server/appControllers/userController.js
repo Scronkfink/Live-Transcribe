@@ -41,25 +41,6 @@ userController.signIn = async (req, res, next) => {
       });
     }
 
-    // Bypass Twilio 2FA for specific email
-    // if (email === "jacksonchanson@gmail.com") {
-    //   const sessionToken = generateSessionToken(); // Generate a session token
-    //   const session = new Session({
-    //     userId: user._id,
-    //     token: sessionToken,
-    //     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
-    //   });
-    //   await session.save();
-      
-    //   return res.status(202).json({
-    //     message: 'Successfully signed in without 2FA',
-    //     email: user.email,
-    //     phone: user.phone,
-    //     name: user.name,
-    //     sessionToken: sessionToken // Include the session token in the response
-    //   });
-    // }
-
     console.log("APP user.controller.signIn; session not found. Procceeding to 2fa");
     // Store the user's phone in res.locals and proceed to the next controller
     res.locals.phone = user.phone;

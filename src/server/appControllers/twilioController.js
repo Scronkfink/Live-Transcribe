@@ -6,6 +6,7 @@ const twilioController = {};
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 const client = twilio(accountSid, authToken);
 
 twilioController.twoFactor = async (req, res, next) => {
@@ -49,6 +50,28 @@ twilioController.twoFactor = async (req, res, next) => {
   } catch (error) {
     console.error("Error in twilioController.twoFactor:", error);
     res.status(500).json({ message: 'Failed to send 2FA code' });
+  }
+};
+
+twilioController.transcriptionReady = async (req, res, next) => {
+  try {
+    const phoneNumber = res.locals.phone;
+
+    if (!phoneNumber) {
+      return res.status(400).send('Phone number not found in res.locals');
+    }
+
+    await client.messages.create({
+      body: 'Your transcription is now available for access through our secure user interface.',
+      from: twilioPhoneNumber,
+      to: phoneNumber
+    });
+
+    console.log(`Message sent to ${phoneNumber}`);
+    next();
+  } catch (error) {
+    console.error('Failed to send message:', error);
+    next(error);
   }
 };
 
