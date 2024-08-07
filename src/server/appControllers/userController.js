@@ -110,9 +110,9 @@ userController.authenticate = async (req, res) => {
 };
 
 userController.signUp = async (req, res, next) => {
-  let { email, phone, password, firstName } = req.body;
+  let { email, phone, password, firstName, lastName, deviceIdentifier } = req.body;
 
-  const name = firstName;
+  const name = `${firstName} ${lastName}`;
 
   console.log("APP userController.signUp; this is req.body: ", req.body);
 
@@ -134,7 +134,8 @@ userController.signUp = async (req, res, next) => {
       email,
       phone,
       password, // Password will be hashed due to pre-save hook in the model
-      name 
+      name,
+      deviceIdentifier // Save the device identifier
     });
 
     // Save the user to the database
@@ -359,11 +360,11 @@ userController.getSummary = async (req, res) => {
 
 userController.faceID = async (req, res) => {
   console.log("in userController.faceID; this is req.body: ", req.body);
-  const { email } = req.body;
+  const { deviceIdentifier } = req.body;
 
   try {
-    // Find the user by email
-    const user = await User.findOne({ email });
+    // Find the user by device identifier
+    const user = await User.findOne({ deviceIdentifier });
 
     if (!user) {
       // If the user is not found, return an error
@@ -391,7 +392,7 @@ userController.faceID = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Respond with the JWT token
+    // Respond with the JWT token and user information
     res.status(202).json({
       message: 'Face ID authentication successful',
       token: jwtToken,
