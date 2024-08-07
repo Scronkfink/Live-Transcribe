@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
   company: { type: String, required: false },
   transcriptions: [transcriptionSchema],
   twoFactorCode: { type: String, required: false },
-  twoFactorExpires: { type: Date, required: false }
+  twoFactorExpires: { type: Date, required: false },
+  deviceIdentifier: { type: String, required: false }
 });
 
 // Pre-save hook to hash the password before saving the user

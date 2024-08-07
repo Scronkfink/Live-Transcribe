@@ -31,7 +31,7 @@ const convertTxtToPdf = (txtFilePath, pdfFilePath) => {
 const convertStrToPDF = async (string, res) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const doc = await PDFDocument.create();
+      const doc = new PDFDocument();
       const page = doc.addPage();
       page.drawText(string, {
         x: 50,

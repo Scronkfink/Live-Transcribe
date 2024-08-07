@@ -4,10 +4,12 @@ const Session = require('../models/sessionModel.js');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Updated signIn function to check the user's credentials in the database
 userController.signIn = async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, deviceIdentifier } = req.body;
 
   console.log("APP userController.signIn; this is req.body: ", req.body);
   try {
@@ -37,13 +39,19 @@ userController.signIn = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         name: user.name,
-        sessionToken: existingSession.token // Include the session token in the response
+        sessionToken: existingSession.token, // Include the session token in the response
+        deviceIdentifier: user.deviceIdentifier // Include the device identifier
       });
     }
 
-    console.log("APP user.controller.signIn; session not found. Procceeding to 2fa");
-    // Store the user's phone in res.locals and proceed to the next controller
+    // Store the user's phone and deviceIdentifier in res.locals and proceed to the next controller
     res.locals.phone = user.phone;
+    res.locals.deviceIdentifier = deviceIdentifier;
+
+    // Update the user's deviceIdentifier in the database
+    user.deviceIdentifier = deviceIdentifier;
+    await user.save();
+
     next();
 
   } catch (error) {
@@ -101,7 +109,7 @@ userController.authenticate = async (req, res) => {
   }
 };
 
-userController.signUp = async (req, res) => {
+userController.signUp = async (req, res, next) => {
   let { email, phone, password, firstName } = req.body;
 
   const name = firstName;
@@ -110,6 +118,8 @@ userController.signUp = async (req, res) => {
 
   // Remove dashes from phone number
   phone = phone.replace(/-/g, "");
+
+  res.locals.phone = phone
 
   try {
     // Check if the user already exists
@@ -131,7 +141,7 @@ userController.signUp = async (req, res) => {
     await newUser.save();
     console.log("APP user.controller.signUp; user added successfully");
     // Return success response
-    return res.status(202).json({ message: 'User successfully signed up', email: newUser.email, phone: newUser.phone, name: newUser.name });
+    next();
 
   } catch (error) {
     // Handle any errors that occur during the process
@@ -344,6 +354,58 @@ userController.getSummary = async (req, res) => {
   } catch (error) {
     console.error('Error fetching summary:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.faceID = async (req, res) => {
+  console.log("in userController.faceID; this is req.body: ", req.body);
+  const { email } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // If the user is not found, return an error
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Create a session token
+    const sessionToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+
+    // Save the session token to the database
+    const session = new Session({
+      userId: user._id,
+      token: sessionToken,
+      expiresAt: expiresAt
+    });
+
+    await session.save();
+
+    // Create a JWT token
+    const jwtToken = jwt.sign(
+      { userId: user._id, sessionToken: sessionToken },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Respond with the JWT token
+    res.status(202).json({
+      message: 'Face ID authentication successful',
+      token: jwtToken,
+      user: {
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+        sessionToken: sessionToken
+      }
+    });
+  } catch (error) {
+    // Handle any errors that occur during the process
+    console.error('Error in Face ID authentication:', error);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
