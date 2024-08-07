@@ -10,7 +10,8 @@ const transcriptionSchema = new mongoose.Schema({
   pdf: { type: Buffer, required: false },
   pdfSize: { type: String, required: false},
   length: {type: String, required: false},
-  completed: {type: Boolean, required: false}
+  completed: {type: Boolean, required: false},
+  summary: {type: String, required: false}
 });
 
 const userSchema = new mongoose.Schema({

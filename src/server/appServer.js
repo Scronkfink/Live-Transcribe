@@ -5,13 +5,15 @@ const userController = require('./appControllers/userController.js');
 const { upload, transcriptionController } = require('./appControllers/transcriptionController.js');
 const emailController = require('./appControllers/emailController.js');
 const twilioController = require('./appControllers/twilioController.js');
+const summarizationController = require('./appControllers/summarizationController.js')
 
 router.post('/signIn', userController.signIn, twilioController.twoFactor);
 router.post('/authentication', userController.authenticate)
 router.post('/signUp', userController.signUp);
-router.post('/test', upload.single('file'), transcriptionController.test, userController.createTranscription, transcriptionController.transcribe, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript);
+router.post('/test', upload.single('file'), transcriptionController.test, userController.createTranscription, transcriptionController.transcribe, summarizationController.summarize, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript);
 router.post("/deleteTranscription", userController.deleteTranscription);
 router.post('/getTranscriptions', userController.getTranscriptions);
 router.post('/getPDF', userController.getPDF);
+router.post('/getSummary', userController.getSummary)
 
 module.exports = router;
