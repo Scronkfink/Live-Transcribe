@@ -10,6 +10,7 @@ const appServer = require('./appServer');
 const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
 const emailController = require('./controllers/emailController');
+const summarizationController = require('./appControllers/summarizationController');
 const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 const app = express();
@@ -47,6 +48,8 @@ app.use('/app', appServer);
 app.post('/api/voice', twilioController.handleVoice, (req, res) => {
   res.send({ message: 'Voice endpoint hit' });
 });
+
+app.get('/summarize', summarizationController.summarize);
 
 app.post('/api/subject', twilioController.handleSubject, (req, res) => {
   res.send({ message: 'Subject endpoint hit' });
