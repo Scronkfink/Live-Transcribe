@@ -11,7 +11,7 @@ const transcriptionSchema = new mongoose.Schema({
   pdfSize: { type: String, required: false},
   length: {type: String, required: false},
   completed: {type: Boolean, required: false},
-  summary: {type: String, required: false}
+  summary: { type: Buffer, required: false }
 });
 
 const userSchema = new mongoose.Schema({

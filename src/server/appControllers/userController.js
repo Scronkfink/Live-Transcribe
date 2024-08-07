@@ -177,7 +177,7 @@ userController.uploadTranscription = async (req, res, next) => {
 
   const { email, subject } = req.body;
   const pdfFilePath = res.locals.transcriptionPdfPath;
-  const summary = res.locals.summary;
+  const summaryPDFBuffer = res.locals.summary;
 
   try {
     const user = await User.findOne({ email, "transcriptions.subject": subject });
@@ -197,7 +197,7 @@ userController.uploadTranscription = async (req, res, next) => {
 
     transcription.pdf = pdfBuffer;
     transcription.pdfSize = `${pdfSize} KB`; // Set the pdfSize property
-    transcription.summary = summary; // Set the summary property
+    transcription.summary = summaryPDFBuffer; // Set the summary property as PDF buffer
     transcription.completed = true;
 
     await user.save();
@@ -316,7 +316,35 @@ userController.deleteTranscription = async (req, res) => {
 };
 
 userController.getSummary = async (req, res) => {
+  const { email, subject, phoneNumber } = req.body;
 
+  try {
+    const user = await User.findOne({ email, "transcriptions.subject": subject });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const transcription = user.transcriptions.find(transcription => transcription.subject === subject);
+
+    if (!transcription) {
+      return res.status(404).json({ message: 'Transcription not found' });
+    }
+
+    const summaryPDF = transcription.summary;
+
+    if (!summaryPDF) {
+      return res.status(404).json({ message: 'Summary PDF not found' });
+    }
+
+    // Send the PDF summary in the response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(summaryPDF);
+
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 module.exports = userController;
