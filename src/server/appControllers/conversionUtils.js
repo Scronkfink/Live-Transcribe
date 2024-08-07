@@ -28,6 +28,26 @@ const convertTxtToPdf = (txtFilePath, pdfFilePath) => {
   });
 };
 
+const convertStrToPDF = async (string, res) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const doc = await PDFDocument.create();
+      const page = doc.addPage();
+      page.drawText(string, {
+        x: 50,
+        y: page.getHeight() - 50,
+        size: 12,
+      });
+
+      const pdfBytes = await doc.save();
+      res.locals.summary = Buffer.from(pdfBytes);
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 const convertTxtToWord = (txtFilePath, wordFilePath) => {
   return new Promise((resolve, reject) => {
     fs.readFile(txtFilePath, 'utf8', (err, data) => {
@@ -54,4 +74,4 @@ const convertTxtToWord = (txtFilePath, wordFilePath) => {
   });
 };
 
-module.exports = { convertTxtToPdf, convertTxtToWord };
+module.exports = { convertTxtToPdf, convertTxtToWord, convertStrToPDF };

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { convertStrToPDF } = require('./conversionUtils.js');
 
 const summarizationController = {};
 
@@ -26,15 +27,22 @@ summarizationController.summarize = async (req, res, next) => {
       errorOutput += data.toString();
     });
 
-    ollamaProcess.on('close', (code) => {
+    ollamaProcess.on('close', async (code) => {
       if (code !== 0) {
         console.error(`ollama process exited with code ${code}`);
         console.error(`stderr: ${errorOutput}`);
         return res.status(500).json({ error: 'Internal Server Error' });
       }
       console.log(`Ahoy! Here be the summary: ${output}`);
-      res.locals.summary = output;
-      next();
+
+      try {
+        await convertStrToPDF(output, res);
+        console.log('Summary successfully converted to PDF and stored in res.locals.summary');
+        next();
+      } catch (error) {
+        console.error('Error converting summary to PDF:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
     });
 
     ollamaProcess.stdin.write(prompt);

@@ -14,6 +14,6 @@ router.post('/test', upload.single('file'), transcriptionController.test, userCo
 router.post("/deleteTranscription", userController.deleteTranscription);
 router.post('/getTranscriptions', userController.getTranscriptions);
 router.post('/getPDF', userController.getPDF);
-router.post('/getSummary', userController.getSummary)
+router.post('/getSummary', userController.getSummary);
 
 module.exports = router;
