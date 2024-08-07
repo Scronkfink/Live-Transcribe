@@ -173,10 +173,11 @@ userController.createTranscription = async (req, res, next) => {
 };
 
 userController.uploadTranscription = async (req, res, next) => {
-  console.log("APP; in userController.uploadTranscription");
+  console.log("APP: in userController.uploadTranscription");
 
   const { email, subject } = req.body;
   const pdfFilePath = res.locals.transcriptionPdfPath;
+  const summary = res.locals.summary;
 
   try {
     const user = await User.findOne({ email, "transcriptions.subject": subject });
@@ -196,11 +197,12 @@ userController.uploadTranscription = async (req, res, next) => {
 
     transcription.pdf = pdfBuffer;
     transcription.pdfSize = `${pdfSize} KB`; // Set the pdfSize property
+    transcription.summary = summary; // Set the summary property
     transcription.completed = true;
 
     await user.save();
 
-    console.log(`Transcription updated with PDF and marked as completed for user: ${email}`);
+    console.log(`Transcription updated with PDF, summary, and marked as completed for user: ${email}`);
     next();
   } catch (error) {
     console.error('Error uploading transcription:', error);
@@ -311,6 +313,10 @@ userController.deleteTranscription = async (req, res) => {
       console.error(error);
       res.status(500).json({ message: "Internal server error" });
   }
+};
+
+userController.getSummary = async (req, res) => {
+
 };
 
 module.exports = userController;
