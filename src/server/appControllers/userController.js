@@ -153,7 +153,7 @@ userController.signUp = async (req, res, next) => {
 };
 
 userController.createTranscription = async (req, res, next) => {
-  console.log("APP; in userController.createTranscription");
+  console.log("APP; in userController.createTranscription; this is req.body: ", req.body);
   
   const { email, subject, length } = req.body;
 
@@ -166,8 +166,8 @@ userController.createTranscription = async (req, res, next) => {
 
     const newTranscription = {
       email: email,
-      subject: subject,
-      length: Math.floor(length),
+      subject: subject || "test-run",
+      length: Math.floor(length) || 9,
       timestamp: new Date(),
       completed: false
     };
@@ -363,20 +363,16 @@ userController.faceID = async (req, res) => {
   const { deviceIdentifier } = req.body;
 
   try {
-    // Find the user by device identifier
     const user = await User.findOne({ deviceIdentifier });
 
     if (!user) {
-      // If the user is not found, return an error
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Create a session token
     const sessionToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
-    // Save the session token to the database
     const session = new Session({
       userId: user._id,
       token: sessionToken,
@@ -385,26 +381,14 @@ userController.faceID = async (req, res) => {
 
     await session.save();
 
-    // Create a JWT token
-    const jwtToken = jwt.sign(
-      { userId: user._id, sessionToken: sessionToken },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    // Respond with the JWT token and user information
-    res.status(202).json({
-      message: 'Face ID authentication successful',
-      token: jwtToken,
-      user: {
-        email: user.email,
-        phone: user.phone,
-        name: user.name,
-        sessionToken: sessionToken
-      }
+    return res.status(202).json({
+      message: 'Successfully signed in with faceID',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      sessionToken: session.token, // Include the session token in the response 
     });
   } catch (error) {
-    // Handle any errors that occur during the process
     console.error('Error in Face ID authentication:', error);
     return res.status(500).json({ message: 'Server error' });
   }
