@@ -29,19 +29,29 @@ const convertTxtToPdf = (txtFilePath, pdfFilePath) => {
 };
 
 const convertStrToPDF = async (string, res) => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument();
-      const page = doc.addPage();
-      page.drawText(string, {
-        x: 50,
-        y: page.getHeight() - 50,
-        size: 12,
+
+      // Pipe the document to a buffer
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        res.locals.summary = pdfBuffer;
+        resolve();
       });
 
-      const pdfBytes = await doc.save();
-      res.locals.summary = Buffer.from(pdfBytes);
-      resolve();
+      // Add text to the document
+      doc.text(string, {
+        x: 50,
+        y: 50,
+        width: 500,
+        align: 'left'
+      });
+
+      // Finalize the PDF and end the document
+      doc.end();
     } catch (error) {
       reject(error);
     }
