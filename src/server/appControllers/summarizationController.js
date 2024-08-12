@@ -5,7 +5,7 @@ const { convertStrToPDF } = require('./conversionUtils.js');
 const summarizationController = {};
 
 summarizationController.summarize = async (req, res, next) => {
-  console.log("APP: in summarizationController.summarize");
+  console.log("APP; in summarizationController.summarize (4/7);");
 
   const filePath = res.locals.transcription;
   const promptPrefix = "Create a short summary of the following transcription: ";

@@ -175,6 +175,7 @@ transcriptionController.transcribe = async (req, res, next) => {
   const audioPath = res.locals.audioPath;
   const email = req.body.email; // Assuming the email is sent in the form-data
 
+  console.log("APP; transcriptionController.transcribe (3/7);")
   if (!audioPath) {
     console.error('No audio file found.');
     return res.status(400).send('No audio file found.');

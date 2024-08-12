@@ -26,6 +26,8 @@ twilioController.handleVoice = async (req, res) => {
 
       const message = `Hello, ${user.name}. I'm here to work as your AI assistant on behalf of CopyTalk to offer you some audio transcription services. Would you mind telling me the subject of this conversation?`;
 
+
+      console.log("This is the ElevenLabs API KEY:", process.env.ELEVENLABS_API_KEY)
       // Call ElevenLabs API to generate a personalized message
       const elevenLabsResponse = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/UDoSXdwuEuC59qu2AfUo', {
         text: message,
@@ -49,7 +51,7 @@ twilioController.handleVoice = async (req, res) => {
 
       fs.writeFileSync(personalizedMessagePath, audioBuffer); // Save personalized message
 
-      const personalizedMessageUrl = `${process.env.SERVER_ADDRESS}/api/personalized/${path.basename(personalizedMessagePath)}`;
+      const personalizedMessageUrl = ` https://2e81-2600-1006-b1c6-f658-3db5-4ae9-8d06-adcd.ngrok-free.app/api/personalized/${path.basename(personalizedMessagePath)}`;
       console.log(`Personalized message URL: ${personalizedMessageUrl}`);
 
       // Play pre-recorded and personalized messages
@@ -60,7 +62,7 @@ twilioController.handleVoice = async (req, res) => {
       twiml.record({
         action: '/api/subject',
         method: 'POST',
-        maxLength: 30,
+        maxLength: 5,
         playBeep: true
       });
     } else {
@@ -126,7 +128,7 @@ twilioController.startRecording = (req, res) => {
     method: 'POST',
     maxLength: 600, // max 10 minutes
     playBeep: true,
-    finishOnKey: '*' // Press * to finish recording
+    finishOnKey: '0123456789#*' // Allow any key to finish recording
   });
   
   twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
