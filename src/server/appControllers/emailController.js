@@ -14,6 +14,7 @@ const transporter = nodemailer.createTransport({
 });
 
 emailController.sendTranscript = async (req, res, next) => {
+  console.log("APP; emailController.sendTranscript (7/7);")
   const email = res.locals.email;
   const user = res.locals.user;
 

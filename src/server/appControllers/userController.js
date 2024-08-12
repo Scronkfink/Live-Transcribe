@@ -153,7 +153,7 @@ userController.signUp = async (req, res, next) => {
 };
 
 userController.createTranscription = async (req, res, next) => {
-  console.log("APP; in userController.createTranscription; this is req.body: ", req.body);
+  console.log("APP; in userController.createTranscription (2/7); this is req.body: ", req.body);
   
   const { email, subject, length } = req.body;
 
@@ -184,7 +184,7 @@ userController.createTranscription = async (req, res, next) => {
 };
 
 userController.uploadTranscription = async (req, res, next) => {
-  console.log("APP: in userController.uploadTranscription");
+  console.log("APP; in userController.uploadTranscription (5/7);");
 
   const { email, subject } = req.body;
   const pdfFilePath = res.locals.transcriptionPdfPath;
