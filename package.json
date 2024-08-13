@@ -2,7 +2,8 @@
  "scripts": {
   "start": "node src/server/server.js",
   "build": "webpack --mode production",
-  "dev": "NODE_ENV=development webpack serve --open & NODE_ENV=development nodemon src/server/server.js"
+  "dev": "NODE_ENV=development webpack serve --open & NODE_ENV=development nodemon src/server/server.js",
+  "kill": "lsof -t -i:8080 -sTCP:LISTEN | xargs -r kill -9 lsof -t -i:3000 -sTCP:LISTEN | xargs -r kill -9"
  },
  "dependencies": {
   "@headlessui/react": "^2.0.4",

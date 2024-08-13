@@ -39,7 +39,7 @@ const Splash = () => {
     setIsDragOver(false);
   
     const file = e.dataTransfer.files[0];
-    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg', 'audio/x-wav'];
+    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg', 'audio/x-wav', 'audio/x-m4a', 'audio/m4a'];
     const maxSize = 10 * 1024 * 1024; // 10MB  
   
     if (!allowedTypes.includes(file.type)) {
@@ -124,6 +124,8 @@ const Splash = () => {
     }
 
   };
+
+ 
 
   return (
     <div className="relative overflow-hidden bg-white">
