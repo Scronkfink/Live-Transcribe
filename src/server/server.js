@@ -25,6 +25,7 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
     'http://localhost:8080',
+    'https://4c7f-2600-1006-b1c6-423-21f8-67d4-f8ea-3ab2.ngrok-free.app', // Add your current NGROK URL here
     'https://*.twilio.com',
   ];
   const origin = req.headers.origin;
