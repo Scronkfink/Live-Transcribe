@@ -55,7 +55,7 @@ twilioController.twoFactor = async (req, res, next) => {
 
 twilioController.transcriptionReady = async (req, res, next) => {
 
-  console.log("APP; in twilioController.transcriptionReady (6/7);")
+  console.log("APP; in twilioController.transcriptionReady (6/7); this is the phoneNumber & twilioNumber: ", res.locals.phone, twilioPhoneNumber)
   try {
     const phoneNumber = res.locals.phone;
 

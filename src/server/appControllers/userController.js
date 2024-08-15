@@ -157,6 +157,8 @@ userController.createTranscription = async (req, res, next) => {
   
   const { email, subject, length } = req.body;
 
+  res.locals.phone = req.body.phone
+  
   try {
     const user = await User.findOne({ email });
 
