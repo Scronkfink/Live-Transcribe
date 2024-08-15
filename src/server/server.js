@@ -25,13 +25,23 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
     'http://localhost:8080',
-    'https://4c7f-2600-1006-b1c6-423-21f8-67d4-f8ea-3ab2.ngrok-free.app', // Add your current NGROK URL here
+    process.env.SERVER_ADDRESS, // Make sure this contains your current NGROK URL
     'https://*.twilio.com',
   ];
+
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.some(allowedOrigin => origin.includes(allowedOrigin))) {
+
+  if (origin && allowedOrigins.some(allowedOrigin => {
+    // Adjust the logic to handle wildcards or exact matches
+    if (allowedOrigin.includes('*')) {
+      const regex = new RegExp(allowedOrigin.replace(/\*/g, '.*'));
+      return regex.test(origin);
+    }
+    return origin === allowedOrigin;
+  })) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
+
   res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   next();
