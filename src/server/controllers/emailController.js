@@ -24,7 +24,10 @@ emailController.sendTranscript = async (req, res, next) => {
   try {
     // Extract the text from the "subject" transcription
     const subjectTranscriptionPath = res.locals.subjectTranscription;
-    const subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
+    let subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
+
+    // Use a regular expression to remove everything up to and including the first " - "
+    subjectTranscriptionText = subjectTranscriptionText.replace(/^.*? - /, '');
 
     // Read the HTML template and replace placeholders
     let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');

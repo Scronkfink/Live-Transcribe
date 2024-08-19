@@ -51,7 +51,7 @@ twilioController.handleVoice = async (req, res) => {
 
       fs.writeFileSync(personalizedMessagePath, audioBuffer); // Save personalized message
 
-      const personalizedMessageUrl = ` https://2e81-2600-1006-b1c6-f658-3db5-4ae9-8d06-adcd.ngrok-free.app/api/personalized/${path.basename(personalizedMessagePath)}`;
+      const personalizedMessageUrl = `${process.env.SERVER_ADDRESS}/api/personalized/${path.basename(personalizedMessagePath)}`;
       console.log(`Personalized message URL: ${personalizedMessageUrl}`);
 
       // Play pre-recorded and personalized messages

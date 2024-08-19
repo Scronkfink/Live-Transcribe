@@ -85,15 +85,17 @@ const Splash = () => {
         throw new Error('Network response was not ok');
       }
   
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'transcription.txt';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      // const blob = await response.blob();
+      // const url = window.URL.createObjectURL(blob);
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = 'transcription.txt';
+      // document.body.appendChild(a);
+      // a.click();
+      // a.remove();
+      // window.URL.revokeObjectURL(url);
+
+      alert("The email was sent successfully");
   
     } catch (error) {
       console.error('Error:', error);
