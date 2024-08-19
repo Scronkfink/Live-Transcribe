@@ -173,15 +173,13 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
 transcriptionController.transcribe = async (req, res, next) => {
   const audioPath = res.locals.audioPath;
-  const email = req.body.email; // Assuming the email is sent in the form-data
+  const email = req.body.email;
 
-  console.log("APP; transcriptionController.transcribe (3/7);")
   if (!audioPath) {
     console.error('No audio file found.');
     return res.status(400).send('No audio file found.');
   }
 
-  // Check if the audio file exists
   if (!fs.existsSync(audioPath)) {
     console.error(`Audio file does not exist at: ${audioPath}`);
     return res.status(400).send('Audio file does not exist.');
@@ -192,47 +190,61 @@ transcriptionController.transcribe = async (req, res, next) => {
     return res.status(400).send('No email provided.');
   }
 
-  res.locals.email = email; // Save the email to res.locals
+  res.locals.email = email;
 
-  console.log(`In transcriptionController.transcribe; TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
+  const outputDir = path.resolve('./src/server/output'); // Define your output directory here
+  const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
+  const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-  const outputDir = path.join(__dirname, '..', 'output');
-  const command = `conda run -n whisperx whisperx "${audioPath}" --model large-v2 --compute_type int8 --output_dir "${outputDir}" --output_format txt`;
+  const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
 
-  exec(command, (error, stdout, stderr) => {
-    console.log(`Command executed: ${command}`); // Log the command
+  console.log('Executing shell command:', command);
+
+  exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
     if (error) {
-      console.error(`Error during transcription: ${error}`);
+      console.error(`Error: ${error.message}`);
       console.error(`stderr: ${stderr}`);
-      return res.status(500).send('Error during transcription.');
+      return;
     }
 
-    console.log(`Transcription stdout: ${stdout}`);
-    console.log(`Transcription stderr: ${stderr}`); // Log stderr
+    console.log("Proceeding to JSON to TXT conversion");
 
-    const outputFilePath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
-    const desktopPath = path.join(os.homedir(), 'Desktop');
-    const desktopOutputPath = path.join(desktopPath, `${path.parse(audioPath).name}.txt`);
+    // Read the JSON file and parse it
+    let transcriptionData;
+    try {
+      const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
+      transcriptionData = JSON.parse(jsonData);
+    } catch (err) {
+      console.error('Error reading or parsing JSON file:', err);
+      return res.status(500).send('Error processing transcription data.');
+    }
 
-    console.log(`Reading transcription result from: ${outputFilePath}`);
+    const formatTime = (seconds) => {
+      const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${remainingSeconds}`;
+    };
 
-    fs.readFile(outputFilePath, 'utf8', (err, data) => {
+    const formattedText = transcriptionData.segments.map(segment => {
+      const speaker = segment.speaker;
+      const startTime = formatTime(segment.start);
+      const endTime = formatTime(segment.end);
+      const text = segment.text.trim();
+
+      return `${speaker} (${startTime}-${endTime}) - "${text}"`;
+    }).join('\n\n');
+
+    // Write the formatted text to a .txt file
+    fs.writeFile(txtOutputPath, formattedText, (err) => {
       if (err) {
-        console.error(`Error reading output file: ${err}`);
-        return res.status(500).send('Error reading transcription result.');
+        console.error('Error writing to text file:', err);
+        return res.status(500).send('Error saving transcription text.');
       }
 
-      fs.writeFile(desktopOutputPath, data, (err) => {
-        if (err) {
-          console.error(`Error saving transcription to desktop: ${err}`);
-          return res.status(500).send('Error saving transcription to desktop.');
-        }
-
-        console.log('Transcription successful and saved to desktop.');
-        res.locals.transcription = data;
-        res.locals.outputFilePath = outputFilePath; // Save the output file path to res.locals
-        next();
-      });
+      // Set the file path to res.locals so it can be accessed in the next middleware
+      res.locals.outputFilePath = txtOutputPath;
+      console.log('Transcription text saved successfully.');
+      next();
     });
   });
 };
