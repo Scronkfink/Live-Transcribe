@@ -45,7 +45,12 @@ twilioController.twoFactor = async (req, res, next) => {
       email: updatedUser.email,
       phone: updatedUser.phone,
       name: updatedUser.name,
-      sessionToken: null // Include other fields as necessary
+      sessionToken: null,
+      notifications: {
+        sms: updatedUser.notifications?.sms || true, // Default to false if undefined
+        email: updatedUser.notifications?.email || true, // Default to false if undefined
+        app: updatedUser.notifications?.app || true // Default to false if undefined
+      } // Include other fields as necessary
     });
   } catch (error) {
     console.error("Error in twilioController.twoFactor:", error);

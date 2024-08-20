@@ -33,6 +33,9 @@ userController.signIn = async (req, res, next) => {
     const existingSession = await Session.findOne({ userId: user._id, expiresAt: { $gt: new Date() } });
 
     if (existingSession) {
+
+      existingSession.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Example: extend by 24 hours
+      await existingSession.save();
       // If a valid session exists, skip 2FA
       return res.status(202).json({
         message: 'Successfully signed in without 2FA',
@@ -40,7 +43,12 @@ userController.signIn = async (req, res, next) => {
         phone: user.phone,
         name: user.name,
         sessionToken: existingSession.token, // Include the session token in the response
-        deviceIdentifier: user.deviceIdentifier // Include the device identifier
+        deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+        notifications: {
+          sms: user.notifications?.sms || false, // Default to false if undefined
+          email: user.notifications?.email || false, // Default to false if undefined
+          app: user.notifications?.app || false // Default to false if undefined
+        }
       });
     }
 
@@ -135,7 +143,12 @@ userController.signUp = async (req, res, next) => {
       phone,
       password, // Password will be hashed due to pre-save hook in the model
       name,
-      deviceIdentifier // Save the device identifier
+      deviceIdentifier,
+      notifications: { // Add default notification settings
+        email: true,
+        sms: true,
+        app: true
+      } // Save the device identifier
     });
 
     // Save the user to the database
@@ -392,6 +405,42 @@ userController.faceID = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in Face ID authentication:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.updateNotifications = async (req, res) => {
+
+  console.log("APP; in userController.updateNotifications; this is req.body: ", req.body);
+
+  try {
+    // Extract the phone number and potential notification settings from the request body
+    const { phone, emailNotification, smsNotification, appNotification } = req.body;
+
+    // Find the user by phone number
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update the notifications object only if the respective field is provided in the request
+    if (typeof emailNotification === 'boolean') {
+      user.notifications.email = emailNotification;
+    }
+    if (typeof smsNotification === 'boolean') {
+      user.notifications.sms = smsNotification;
+    }
+    if (typeof appNotification === 'boolean') {
+      user.notifications.app = appNotification;
+    }
+
+    // Save the updated user
+    await user.save();
+
+    return res.status(200).json({ message: 'Notification settings updated successfully' });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: 'Server error' });
   }
 };

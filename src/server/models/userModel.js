@@ -14,6 +14,12 @@ const transcriptionSchema = new mongoose.Schema({
   summary: { type: Buffer, required: false }
 });
 
+const notificationsSchema = new mongoose.Schema({
+  email: { type: Boolean, required: false, default: true },
+  sms: { type: Boolean, required: false, default: true },
+  app: { type: Boolean, required: false, default: true },
+});
+
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -22,6 +28,7 @@ const userSchema = new mongoose.Schema({
   title: { type: String, required: false },
   company: { type: String, required: false },
   transcriptions: [transcriptionSchema],
+  notifications: notificationsSchema,
   twoFactorCode: { type: String, required: false },
   twoFactorExpires: { type: Date, required: false },
   deviceIdentifier: { type: String, required: false }
