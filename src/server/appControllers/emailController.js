@@ -14,11 +14,17 @@ const transporter = nodemailer.createTransport({
 });
 
 emailController.sendTranscript = async (req, res, next) => {
-  console.log("APP; emailController.sendTranscript (7/7);")
+  console.log("APP; emailController.sendTranscript (7/7);");
+  
+  if (!res.locals.emailNotification) {
+    console.log("Email notifications are disabled. Skipping email notification.");
+    return next(); 
+  }
+
   const email = res.locals.email;
   const user = res.locals.user;
 
-  if (email === "") {
+  if (!email) {
     return next();
   }
 
@@ -55,6 +61,7 @@ emailController.sendTranscript = async (req, res, next) => {
     console.error('Error sending email:', error);
     return next(error);
   }
+
   return next();
 };
 
