@@ -59,9 +59,15 @@ twilioController.twoFactor = async (req, res, next) => {
 };
 
 twilioController.transcriptionReady = async (req, res, next) => {
+  console.log("APP; in twilioController.transcriptionReady (6/7); this is the phoneNumber & twilioNumber: ", res.locals.phone, twilioPhoneNumber);
 
-  console.log("APP; in twilioController.transcriptionReady (6/7); this is the phoneNumber & twilioNumber: ", res.locals.phone, twilioPhoneNumber)
   try {
+    // Check if SMS notifications are enabled
+    if (!res.locals.smsNotification) {
+      console.log("SMS notifications are disabled. Skipping SMS notification.");
+      return next(); // Skip sending the SMS and proceed to the next middleware
+    }
+
     const phoneNumber = res.locals.phone;
 
     if (!phoneNumber) {

@@ -174,11 +174,16 @@ userController.createTranscription = async (req, res, next) => {
   
   try {
     const user = await User.findOne({ email });
-
+  
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
+  
+    // Save notification settings to res.locals
+    res.locals.smsNotification = user.notifications?.sms ?? true; // Default to false if undefined
+    res.locals.emailNotification = user.notifications?.email ?? true; // Default to false if undefined
+    res.locals.appNotification = user.notifications?.app ?? true; // Default to false if undefined
+  
     const newTranscription = {
       email: email,
       subject: subject || "test-run",
@@ -186,12 +191,12 @@ userController.createTranscription = async (req, res, next) => {
       timestamp: new Date(),
       completed: false
     };
-
+  
     user.transcriptions.push(newTranscription);
     await user.save();
-
+  
     console.log(`New transcription added for user: ${email}`);
-    next()
+    next();
   } catch (error) {
     console.error('Error creating transcription:', error);
     res.status(500).json({ message: 'Server error' });
