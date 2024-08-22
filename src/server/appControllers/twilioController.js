@@ -87,7 +87,7 @@ twilioController.transcriptionReady = async (req, res, next) => {
     
     // Send the SMS with the signed URL
     await client.messages.create({
-      body: `Your transcription is ready. You can securely download it here: ${signedUrl}`,
+      body: `Your transcription is ready. You can access it through a secure URL here: ${signedUrl}`,
       from: twilioPhoneNumber,
       to: phoneNumber
     });

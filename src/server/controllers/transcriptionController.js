@@ -288,7 +288,16 @@ transcriptionController.transcribe = async (req, res, next) => {
 
     console.log("Proceeding to JSON to TXT conversion");
 
-    // Read the JSON file and parse it
+    // Read and parse the JSON file
+    let transcriptionData;
+    try {
+      const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
+      transcriptionData = JSON.parse(jsonData);
+    } catch (err) {
+      console.error('Error reading or parsing JSON file:', err);
+      return res.status(500).send('Error processing transcription data.');
+    }
+
     const formatTime = (seconds) => {
       const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
       const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
