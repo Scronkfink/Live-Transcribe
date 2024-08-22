@@ -71,6 +71,7 @@ transcriptionController.transcribe = async (req, res, next) => {
     await convertTxtToPdf(txtFilePath, pdfFilePath);
     await convertTxtToWord(txtFilePath, docxFilePath);
 
+    console.log("PDF file generated at:", pdfFilePath);
     res.locals.transcriptionPdfPath = pdfFilePath;
     res.locals.transcriptionWordPath = docxFilePath;
     

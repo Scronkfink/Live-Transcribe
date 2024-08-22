@@ -1,12 +1,16 @@
 require('dotenv').config();
 const twilio = require('twilio');
 const User = require('../models/userModel.js');
+const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
 
 const twilioController = {};
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+const SECRET_KEY = process.env.SECRET_KEY
 const client = twilio(accountSid, authToken);
 
 twilioController.twoFactor = async (req, res, next) => {
@@ -62,6 +66,8 @@ twilioController.transcriptionReady = async (req, res, next) => {
   console.log("APP; in twilioController.transcriptionReady (6/7); this is the phoneNumber & twilioNumber: ", res.locals.phone, twilioPhoneNumber);
 
   try {
+    const transcriptionPDF = res.locals.transcriptionPdfPath;
+
     // Check if SMS notifications are enabled
     if (!res.locals.smsNotification) {
       console.log("SMS notifications are disabled. Skipping SMS notification.");
@@ -74,18 +80,39 @@ twilioController.transcriptionReady = async (req, res, next) => {
       return res.status(400).send('Phone number not found in res.locals');
     }
 
+    // Generate the secure signed URL
+    const signedUrl = generateSignedUrl(transcriptionPDF);
+
+    console.log("Generated signed URL:", signedUrl);
+    
+    // Send the SMS with the signed URL
     await client.messages.create({
-      body: 'Your transcription is now available for access through our secure user interface.',
+      body: `Your transcription is ready. You can securely download it here: ${signedUrl}`,
       from: twilioPhoneNumber,
       to: phoneNumber
     });
 
-    console.log(`Message sent to ${phoneNumber}`);
+    console.log(`Message sent to ${phoneNumber} with URL: ${signedUrl}`);
     next();
   } catch (error) {
     console.error('Failed to send message:', error);
     next(error);
   }
 };
+
+function generateSignedUrl(filePath, expiresIn = 3600) {
+  const expirationTime = Math.floor(Date.now() / 1000) + expiresIn;
+
+  console.log("Original filePath:", filePath);
+  
+  const signature = crypto
+    .createHmac('sha256', SECRET_KEY)
+    .update(`${filePath}:${expirationTime}`)
+    .digest('hex');
+
+  return `${process.env.BASE_URL}/app/download?filePath=${encodeURIComponent(
+    filePath
+  )}&expires=${expirationTime}&signature=${signature}`;
+}
 
 module.exports = twilioController;
