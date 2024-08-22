@@ -19,13 +19,16 @@ const server = http.createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../../dist')));
+app.set('trust proxy', 1); 
 
 //CORS
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
-    'http://localhost:8080',
-    process.env.SERVER_ADDRESS, // Make sure this contains your current NGROK URL
+    // 'http://localhost:8080',
+    'https://livetranscribe.org',
+    'https://www.livetranscribe.org',
+    process.env.SERVER_ADDRESS, // Your current NGROK URL (if applicable)
     'https://*.twilio.com',
   ];
 
