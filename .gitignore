@@ -1,0 +1,8 @@
+node_modules
+src/server/uploads/
+src/server/output/
+/output
+.env
+src/server/voices/
+src/server/appControllers/uploads
+translate-env/
