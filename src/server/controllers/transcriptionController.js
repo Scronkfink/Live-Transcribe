@@ -156,6 +156,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
 
+    
     console.log('Executing shell command:', command);
 
     exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
