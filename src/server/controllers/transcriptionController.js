@@ -154,16 +154,15 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
 
-    
     console.log('Executing shell command:', command);
-
-    exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+    
+    exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
-        return reject('Error during transcription.');
+        return;
       }
 
       console.log("Proceeding to JSON to TXT conversion");
@@ -276,11 +275,11 @@ transcriptionController.transcribe = async (req, res, next) => {
   const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
   const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-  const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+  const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
 
   console.log('Executing shell command:', command);
-
-  exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+  
+  exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error: ${error.message}`);
       console.error(`stderr: ${stderr}`);
