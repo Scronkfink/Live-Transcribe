@@ -14,7 +14,7 @@ summarizationController.summarize = async (req, res, next) => {
     const transcriptionText = fs.readFileSync(filePath, 'utf8');
     const prompt = `${promptPrefix} ${transcriptionText}`;
 
-    const ollamaProcess = spawn('ollama', ['run', 'llama3']);
+    const ollamaProcess = spawn('C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe', ['run', 'llama3']);
 
     let output = '';
     let errorOutput = '';
