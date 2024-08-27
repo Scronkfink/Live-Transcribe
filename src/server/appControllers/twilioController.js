@@ -50,6 +50,7 @@ twilioController.twoFactor = async (req, res, next) => {
       phone: updatedUser.phone,
       name: updatedUser.name,
       sessionToken: null,
+      diarization: updatedUser.diarization ?? false,
       notifications: {
         sms: updatedUser.notifications?.sms || true, // Default to false if undefined
         email: updatedUser.notifications?.email || true, // Default to false if undefined

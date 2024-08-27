@@ -11,11 +11,11 @@ const transcriptionController = {};
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
-transcriptionController.test = (req, res, next) => {
+transcriptionController.initialize = (req, res, next) => {
   const audioData = req.file;
   const { email, phone, name } = req.body;
 
-  console.log("APP, transcriptionController.test(1/7); this is req.body: ", req.body);
+  console.log("APP, transcriptionController.initialize(1/7); this is req.body: ", req.body);
 
   if (!audioData) {
     return res.status(400).send("No file uploaded");
@@ -83,6 +83,9 @@ transcriptionController.transcribe = async (req, res, next) => {
 };
 
 const transcribeAudio = (req, res, key, audioPath) => {
+
+  const diarization = res.locals.diarization; // Access the diarization value
+
   return new Promise((resolve, reject) => {
     if (!audioPath) {
       console.error('No audio file found.');
@@ -100,7 +103,9 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+    // Determine which script to run based on the diarization value
+    const scriptName = diarization ? 'run_transcription.sh' : 'run_transcription2.sh';
+    const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/${scriptName} '${audioPath}' '${outputDir}'"`;
 
     console.log('Executing shell command:', command);
 
@@ -111,39 +116,70 @@ const transcribeAudio = (req, res, key, audioPath) => {
         return reject('Error during transcription.');
       }
 
-      console.log("Proceeding to JSON to TXT conversion");
+      // If diarization is false, directly process the plain text output
+      if (!diarization) {
+        console.log("Diarization is disabled. Skipping merging and formatting.");
 
-      // Read the JSON file and parse it
-      let transcriptionData;
-      try {
-        const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
-        transcriptionData = JSON.parse(jsonData);
-      } catch (err) {
-        console.error('Error reading or parsing JSON file:', err);
-        return reject('Error processing transcription data.');
-      }
+        // Directly save the plain text output from stdout to the text file
+        fs.writeFile(txtOutputPath, stdout, (err) => {
+          if (err) {
+            console.error('Error writing to text file:', err);
+            return reject('Error saving transcription text.');
+          }
+          res.locals[key] = txtOutputPath;
+          return resolve();
+        });
+      } else {
+        console.log("Proceeding to JSON to TXT conversion");
 
-      const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${minutes}:${remainingSeconds}`;
-      };
-      
-      const mergeSegmentsBySpeaker = (segments) => {
-        const mergedSegments = [];
-        let currentSpeaker = null;
-        let currentStartTime = null;
-        let currentEndTime = null;
-        let currentText = '';
-      
-        segments.forEach((segment, index) => {
-          if (segment.speaker === currentSpeaker) {
-            // If the same speaker, extend the end time and append the text
-            currentEndTime = segment.end;
-            currentText += ` ${segment.text.trim()}`;
-          } else {
-            // If it's a new speaker or the first segment, push the previous segment to the array
-            if (currentSpeaker !== null) {
+        // Read the JSON file and parse it
+        let transcriptionData;
+        try {
+          const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
+          transcriptionData = JSON.parse(jsonData);
+        } catch (err) {
+          console.error('Error reading or parsing JSON file:', err);
+          return reject('Error processing transcription data.');
+        }
+
+        const formatTime = (seconds) => {
+          const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+          return `${minutes}:${remainingSeconds}`;
+        };
+
+        const mergeSegmentsBySpeaker = (segments) => {
+          const mergedSegments = [];
+          let currentSpeaker = null;
+          let currentStartTime = null;
+          let currentEndTime = null;
+          let currentText = '';
+
+          segments.forEach((segment, index) => {
+            if (segment.speaker === currentSpeaker) {
+              // If the same speaker, extend the end time and append the text
+              currentEndTime = segment.end;
+              currentText += ` ${segment.text.trim()}`;
+            } else {
+              // If it's a new speaker or the first segment, push the previous segment to the array
+              if (currentSpeaker !== null) {
+                mergedSegments.push({
+                  speaker: currentSpeaker,
+                  startTime: currentStartTime,
+                  endTime: currentEndTime,
+                  text: currentText.trim()
+                });
+              }
+
+              // Start tracking the new speaker's segment
+              currentSpeaker = segment.speaker;
+              currentStartTime = segment.start;
+              currentEndTime = segment.end;
+              currentText = segment.text.trim();
+            }
+
+            // Push the last segment after the loop ends
+            if (index === segments.length - 1) {
               mergedSegments.push({
                 speaker: currentSpeaker,
                 startTime: currentStartTime,
@@ -151,47 +187,31 @@ const transcribeAudio = (req, res, key, audioPath) => {
                 text: currentText.trim()
               });
             }
-      
-            // Start tracking the new speaker's segment
-            currentSpeaker = segment.speaker;
-            currentStartTime = segment.start;
-            currentEndTime = segment.end;
-            currentText = segment.text.trim();
-          }
-      
-          // Push the last segment after the loop ends
-          if (index === segments.length - 1) {
-            mergedSegments.push({
-              speaker: currentSpeaker,
-              startTime: currentStartTime,
-              endTime: currentEndTime,
-              text: currentText.trim()
-            });
-          }
-        });
-      
-        return mergedSegments;
-      };
-      
-      const mergedSegments = mergeSegmentsBySpeaker(transcriptionData.segments);
-      
-      const formattedText = mergedSegments.map(segment => {
-        const startTime = formatTime(segment.startTime);
-        const endTime = formatTime(segment.endTime);
-        const text = segment.text;
-      
-        return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
-      }).join('\n\n');
+          });
 
-      // Write the formatted text to a .txt file
-      fs.writeFile(txtOutputPath, formattedText, (err) => {
-        if (err) {
-          console.error('Error writing to text file:', err);
-          return reject('Error saving transcription text.');
-        }
-        res.locals[key] = txtOutputPath;
-        resolve();
-      });
+          return mergedSegments;
+        };
+
+        const mergedSegments = mergeSegmentsBySpeaker(transcriptionData.segments);
+
+        const formattedText = mergedSegments.map(segment => {
+          const startTime = formatTime(segment.startTime);
+          const endTime = formatTime(segment.endTime);
+          const text = segment.text;
+
+          return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
+        }).join('\n\n');
+
+        // Write the formatted text to a .txt file
+        fs.writeFile(txtOutputPath, formattedText, (err) => {
+          if (err) {
+            console.error('Error writing to text file:', err);
+            return reject('Error saving transcription text.');
+          }
+          res.locals[key] = txtOutputPath;
+          resolve();
+        });
+      }
     });
   });
 };

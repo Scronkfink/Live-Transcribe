@@ -31,7 +31,8 @@ const userSchema = new mongoose.Schema({
   notifications: notificationsSchema,
   twoFactorCode: { type: String, required: false },
   twoFactorExpires: { type: Date, required: false },
-  deviceIdentifier: { type: String, required: false }
+  deviceIdentifier: { type: String, required: false },
+  diarization: {type: Boolean, required: false, default: false}
 });
 
 // Pre-save hook to hash the password before saving the user
