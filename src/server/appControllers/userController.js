@@ -182,7 +182,8 @@ userController.createTranscription = async (req, res, next) => {
     // Save notification settings to res.locals
     res.locals.smsNotification = user.notifications?.sms ?? true; // Default to false if undefined
     res.locals.emailNotification = user.notifications?.email ?? true; // Default to false if undefined
-    res.locals.appNotification = user.notifications?.app ?? true; // Default to false if undefined
+    res.locals.appNotification = user.notifications?.app ?? true;
+    res.locals.diarization = user?.diarization ?? false; // Default to false if undefined
   
     const newTranscription = {
       email: email,
