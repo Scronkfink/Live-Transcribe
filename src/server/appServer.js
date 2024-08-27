@@ -25,7 +25,7 @@ const setAudioPath = (req, res, next) => {
 router.post('/signIn', userController.signIn, twilioController.twoFactor);
 router.post('/authentication', userController.authenticate);
 router.post('/signUp', userController.signUp, twilioController.twoFactor);
-router.post('/test', upload.single('file'), transcriptionController.test, userController.createTranscription, transcriptionController.transcribe, summarizationController.summarize, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript);
+router.post('/transcribe', upload.single('file'), transcriptionController.initialize, userController.createTranscription, transcriptionController.transcribe, summarizationController.summarize, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript);
 router.post("/deleteTranscription", userController.deleteTranscription);
 router.post("/faceIDSignIn", userController.faceID);
 router.post('/getTranscriptions', userController.getTranscriptions);

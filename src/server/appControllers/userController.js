@@ -144,6 +144,7 @@ userController.signUp = async (req, res, next) => {
       password, // Password will be hashed due to pre-save hook in the model
       name,
       deviceIdentifier,
+      diarization,
       notifications: { // Add default notification settings
         email: true,
         sms: true,
@@ -182,12 +183,13 @@ userController.createTranscription = async (req, res, next) => {
     // Save notification settings to res.locals
     res.locals.smsNotification = user.notifications?.sms ?? true; // Default to false if undefined
     res.locals.emailNotification = user.notifications?.email ?? true; // Default to false if undefined
-    res.locals.appNotification = user.notifications?.app ?? true; // Default to false if undefined
+    res.locals.appNotification = user.notifications?.app ?? true;
+    res.locals.diarization = user?.diarization ?? false;// Default to false if undefined
   
     const newTranscription = {
       email: email,
       subject: subject || "test-run",
-      length: Math.floor(length) || 9,
+      length: Math.floor(length) || 69,
       timestamp: new Date(),
       completed: false
     };
@@ -438,6 +440,9 @@ userController.updateNotifications = async (req, res) => {
     }
     if (typeof appNotification === 'boolean') {
       user.notifications.app = appNotification;
+    }
+    if (typeof diarizationNotification === 'boolean') {
+      user.diarization = diarization;
     }
 
     // Save the updated user
