@@ -100,7 +100,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
 
     console.log('Executing shell command:', command);
     
