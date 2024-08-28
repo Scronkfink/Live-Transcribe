@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   title: { type: String, required: false },
   company: { type: String, required: false },
+  diarization: {type: Boolean, required: false, default: false},
   transcriptions: [transcriptionSchema],
   notifications: notificationsSchema,
   twoFactorCode: { type: String, required: false },

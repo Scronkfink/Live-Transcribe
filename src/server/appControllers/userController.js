@@ -184,7 +184,8 @@ userController.createTranscription = async (req, res, next) => {
     res.locals.emailNotification = user.notifications?.email ?? true; // Default to false if undefined
     res.locals.appNotification = user.notifications?.app ?? true;
     res.locals.diarization = user?.diarization ?? false; // Default to false if undefined
-  
+    
+    console.log("APP; in userController.createTranscription (2/7); this is res.locals.diarization: ", res.locals.diarization )
     const newTranscription = {
       email: email,
       subject: subject || "test-run",
@@ -421,7 +422,7 @@ userController.updateNotifications = async (req, res) => {
 
   try {
     // Extract the phone number and potential notification settings from the request body
-    const { phone, emailNotification, smsNotification, appNotification } = req.body;
+    const { phone, emailNotification, smsNotification, appNotification, diarization } = req.body;
 
     // Find the user by phone number
     const user = await User.findOne({ phone });
@@ -440,10 +441,13 @@ userController.updateNotifications = async (req, res) => {
     if (typeof appNotification === 'boolean') {
       user.notifications.app = appNotification;
     }
+    if (typeof diarization === 'boolean') {
+      user.diarization = diarization;
+    }
 
     // Save the updated user
     await user.save();
-
+    console.log()
     return res.status(200).json({ message: 'Notification settings updated successfully' });
   } catch (error) {
     console.error(error);

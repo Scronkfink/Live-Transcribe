@@ -114,7 +114,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
       }
 
       // If using run_transcription2.sh, skip JSON processing
-      if (res.locals.diarization) {
+      if (!res.locals.diarization) {
         console.log("Skipping JSON processing as diarization is enabled");
 
         // Check if the output text file exists
