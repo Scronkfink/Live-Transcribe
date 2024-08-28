@@ -15,14 +15,28 @@ transcriptionController.initalize = (req, res, next) => {
   const audioData = req.file;
   const { email, phone, name } = req.body;
 
-  console.log("APP, transcriptionController.test(1/7); this is req.body: ", req.body);
+  console.log("APP, transcriptionController.initalize(1/7); this is req.body: ", req.body);
 
   if (!audioData) {
     return res.status(400).send("No file uploaded");
   }
 
   const uploadsDir = path.join(__dirname, 'uploads');
-  const audioPath = path.join(uploadsDir, audioData.originalname);
+  
+
+  console.log("This is original audioData.originalname: ",  audioData.originalname)
+
+  let originalName = audioData.originalname;
+const dateNow = Date.now();
+
+if (originalName.includes("recording")) {
+    originalName = originalName.replace("recording", `${dateNow}_recording`);
+} else {
+    originalName = `${dateNow}_${originalName}`;
+}
+
+const audioPath = path.join(uploadsDir, originalName);
+
 
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -40,7 +54,7 @@ transcriptionController.initalize = (req, res, next) => {
         return res.status(500).send("Failed to save the audio data");
       }
 
-      console.log(`Audio data stored at: ${audioPath}`);
+      console.log(`APP, transcriptionController.initalize(1/7); res.locals.audioFilePath: ${audioPath}`);
       res.locals.audioFilePath = audioPath;
       res.locals.email = email;
       res.locals.phone = phone;
@@ -53,7 +67,7 @@ transcriptionController.initalize = (req, res, next) => {
 transcriptionController.transcribe = async (req, res, next) => {
   const audioFilePath = res.locals.audioFilePath;
 
-  console.log("APP, in transcriptionController.transcribe; this is audioFilePath: ", audioFilePath);
+  console.log("APP, in transcriptionController.transcribe(3/7)");
 
   if (!audioFilePath) {
     console.error('No audio file path found in res.locals.');
@@ -67,11 +81,12 @@ transcriptionController.transcribe = async (req, res, next) => {
     const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
     const docxFilePath = txtFilePath.replace('.txt', '.docx');
 
-    console.log("APP, in transcriptionController.transcribe; CONVERTING TO .PDF AND .DOCX CAPT'N!");
+    console.log(`APP, in transcriptionController.transcribe (3/7); CONVERTING THIS TXT FILE: ${txtFilePath} to .PDF AND .DOCX CAPT'N!`);
     await convertTxtToPdf(txtFilePath, pdfFilePath);
     await convertTxtToWord(txtFilePath, docxFilePath);
 
     console.log("PDF file generated at:", pdfFilePath);
+    console.log("DOCX file generated at:", docxFilePath);
     res.locals.transcriptionPdfPath = pdfFilePath;
     res.locals.transcriptionWordPath = docxFilePath;
     
@@ -104,8 +119,6 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/${scriptName} '${audioPath}' '${outputDir}'"`;
 
-    console.log('Executing shell command:', command);
-
     exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
@@ -115,7 +128,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
       // If using run_transcription2.sh, skip JSON processing
       if (!res.locals.diarization) {
-        console.log("Skipping JSON processing as diarization is enabled");
+        console.log("Skipping JSON processing as diarization is false");
 
         // Check if the output text file exists
         if (!fs.existsSync(txtOutputPath)) {
@@ -129,7 +142,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
       }
 
       // Process the JSON output and merge speaker segments
-      console.log("Proceeding to JSON to TXT conversion");
+      console.log("Proceeding to JSON to TXT conversion as diarization is true");
 
       let transcriptionData;
       try {

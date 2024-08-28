@@ -83,7 +83,7 @@ twilioController.transcriptionReady = async (req, res, next) => {
     // Generate the secure signed URL
     const signedUrl = generateSignedUrl(transcriptionPDF);
 
-    console.log("Generated signed URL:", signedUrl);
+    // console.log("Generated signed URL:", signedUrl);
     
     // Send the SMS with the signed URL
     await client.messages.create({
@@ -92,7 +92,7 @@ twilioController.transcriptionReady = async (req, res, next) => {
       to: phoneNumber
     });
 
-    console.log(`Message sent to ${phoneNumber} with URL: ${signedUrl}`);
+    console.log(`Message sent to ${phoneNumber} with secure URL`);
     next();
   } catch (error) {
     console.error('Failed to send message:', error);
@@ -103,7 +103,7 @@ twilioController.transcriptionReady = async (req, res, next) => {
 function generateSignedUrl(filePath, expiresIn = 3600) {
   const expirationTime = Math.floor(Date.now() / 1000) + expiresIn;
 
-  console.log("Original filePath:", filePath);
+  // console.log("Original filePath:", filePath);
   
   const signature = crypto
     .createHmac('sha256', SECRET_KEY)

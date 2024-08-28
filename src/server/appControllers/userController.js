@@ -166,7 +166,7 @@ userController.signUp = async (req, res, next) => {
 };
 
 userController.createTranscription = async (req, res, next) => {
-  console.log("APP; in userController.createTranscription (2/7); this is req.body: ", req.body);
+  console.log("APP; in userController.createTranscription (2/7);");
   
   const { email, subject, length } = req.body;
 
@@ -197,7 +197,7 @@ userController.createTranscription = async (req, res, next) => {
     user.transcriptions.push(newTranscription);
     await user.save();
   
-    console.log(`New transcription added for user: ${email}`);
+    console.log(`New transcription added for user(2/7): ${email}`);
     next();
   } catch (error) {
     console.error('Error creating transcription:', error);

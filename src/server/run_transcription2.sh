@@ -16,7 +16,7 @@ echo "Starting WhisperX with diarization..."
 
 conda run -n whisperx_env whisperx "$AUDIO_PATH" \
 --hf_token $HF_TOKEN \
---model large-v2 --language en --compute_type int8 --batch_size 16 --diarize --highlight_words True \
+--model large-v2 --language en --compute_type int8 --batch_size 16 \
 --output_dir "$OUTPUT_DIR" --output_format txt
 
 # Log after the command runs to see if it finishes
