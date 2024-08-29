@@ -5,6 +5,41 @@ require('dotenv').config();
 
 const emailController = {};
 
+function cleanupExpiredFiles() {
+  const outputDir = path.join(__dirname, '../outputs');
+  const expirationTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+  fs.readdir(outputDir, (err, files) => {
+    if (err) {
+      console.error('Error reading the output directory:', err);
+      return;
+    }
+
+    files.forEach(file => {
+      const filePath = path.join(outputDir, file);
+      fs.stat(filePath, (err, stats) => {
+        if (err) {
+          console.error('Error getting file stats:', err);
+          return;
+        }
+
+        const now = Date.now();
+        const fileAge = now - stats.mtimeMs;
+
+        if (fileAge > expirationTime) {
+          fs.unlink(filePath, err => {
+            if (err) {
+              console.error(`Failed to delete file ${filePath}:`, err);
+            } else {
+              console.log(`Deleted file: ${filePath}`);
+            }
+          });
+        }
+      });
+    });
+  });
+}
+
 const transporter = nodemailer.createTransport({
   service: 'Yahoo',
   auth: {
@@ -15,6 +50,20 @@ const transporter = nodemailer.createTransport({
 
 emailController.sendTranscript = async (req, res, next) => {
   console.log("APP; emailController.sendTranscript (7/7);");
+
+  const audioFilePath = res.locals.audioFilePath
+
+  cleanupExpiredFiles();
+
+  if (audioFilePath && fs.existsSync(audioFilePath)) {
+    fs.unlink(audioFilePath, (err) => {
+      if (err) {
+        console.error("Failed to delete the audio file:", err);
+      } else {
+        console.log("Audio file deleted successfully:", audioFilePath);
+      }
+    });
+  }
   
   if (!res.locals.emailNotification) {
     console.log("Email notifications are disabled. Skipping email notification.");
@@ -64,5 +113,9 @@ emailController.sendTranscript = async (req, res, next) => {
 
   return next();
 };
+
+
+
+
 
 module.exports = emailController;

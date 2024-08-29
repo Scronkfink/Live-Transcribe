@@ -15,32 +15,30 @@ if (!fs.existsSync(uploadDir)) {
 }
 const upload = multer({ dest: uploadDir });
 
-transcriptionController.initalize = (req, res, next) => {
+transcriptionController.initialize = (req, res, next) => {
   const audioData = req.file;
   const { email, phone, name } = req.body;
 
-  console.log("APP, transcriptionController.initalize(1/7); this is req.body: ", req.body);
+  console.log("APP, transcriptionController.initialize(1/7); this is req.body: ", req.body);
 
   if (!audioData) {
     return res.status(400).send("No file uploaded");
   }
 
   const uploadsDir = path.join(__dirname, 'uploads');
-  
 
-  console.log("This is original audioData.originalname: ",  audioData.originalname)
+  console.log("This is original audioData.originalname: ",  audioData.originalname);
 
   let originalName = audioData.originalname;
-const dateNow = Date.now();
+  const dateNow = Date.now();
 
-if (originalName.includes("recording")) {
+  if (originalName.includes("recording")) {
     originalName = originalName.replace("recording", `${dateNow}_recording`);
-} else {
+  } else {
     originalName = `${dateNow}_${originalName}`;
-}
+  }
 
-const audioPath = path.join(uploadsDir, originalName);
-
+  const audioPath = path.join(uploadsDir, originalName);
 
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -58,7 +56,16 @@ const audioPath = path.join(uploadsDir, originalName);
         return res.status(500).send("Failed to save the audio data");
       }
 
-      console.log(`APP, transcriptionController.initalize(1/7); res.locals.audioFilePath: ${audioPath}`);
+      // Delete the generic file created by Multer
+      fs.unlink(audioData.path, (err) => {
+        if (err) {
+          console.error("Failed to delete the original uploaded file:", err);
+        } else {
+          console.log("Successfully deleted the original uploaded file.");
+        }
+      });
+
+      console.log(`APP, transcriptionController.initialize(1/7); res.locals.audioFilePath: ${audioPath}`);
       res.locals.audioFilePath = audioPath;
       res.locals.email = email;
       res.locals.phone = phone;
@@ -117,7 +124,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     // Determine which shell script to use based on res.locals.diarization
     const scriptName = res.locals.diarization ? 'run_transcription.sh' : 'run_transcription2.sh';
-    const outputDir = path.join(__dirname, '..', 'output');
+    const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 

@@ -18,7 +18,8 @@ userController.signIn = async (req, res, next) => {
 
     if (!user) {
       // If the user is not found, return an error
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log("APP userController.signIn; user not found")
+      return res.status(402).json({ message: 'Invalid credentials' });
     }
 
     // Compare the provided password with the hashed password in the database
@@ -189,8 +190,8 @@ userController.createTranscription = async (req, res, next) => {
     console.log("APP; in userController.createTranscription (2/7); this is res.locals.diarization: ", res.locals.diarization )
     const newTranscription = {
       email: email,
-      subject: subject || "test-run",
-      length: Math.floor(length) || 9,
+      subject: subject || "n/a",
+      length: Math.floor(length) || "n/a",
       timestamp: new Date(),
       completed: false
     };

@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const transcriptionSchema = new mongoose.Schema({
   email: { type: String, required: true },
   subject: { type: String, required: true },
+  subjectUrl: { type: String, required: false },
   body: { type: String, required: false },
   audioUrl: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },

@@ -17,8 +17,9 @@ const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
-transcriptionController.getAudio = async (req, res, next) => {
-  console.log("In transcriptionController.getAudio; this is res.locals.number: ", res.locals.number);
+transcriptionController.twilioTranscribe = async (req, res, next) => {
+
+  console.log("In transcriptionController.twilioTranscribe(5/6)");
 
   const phoneNumber = res.locals.number;
 
@@ -27,12 +28,11 @@ transcriptionController.getAudio = async (req, res, next) => {
     res.locals.user = user.name;
     res.locals.email = user.email;
 
+    //probably not a good idea to use the transcription identifier as the last recording in the array...but nobody eats 4 marshmallows
     if (user && user.transcriptions.length > 0) {
       const latestTranscription = user.transcriptions[user.transcriptions.length - 1];
       const audioUrl = latestTranscription.audioUrl;
-      const subjectUrl = latestTranscription.subject;
-
-      console.log("In transcriptionController.getAudio; this is audioUrl: ", audioUrl);
+      const subjectUrl = latestTranscription.subjectUrl;
 
       if (audioUrl && subjectUrl) {
         const downloadAudio = async (url, filename) => {
@@ -62,6 +62,7 @@ transcriptionController.getAudio = async (req, res, next) => {
           try {
             const subjectPath = await downloadAudio(subjectUrl, `subject-${user.phone}-${Date.now()}.mp3`);
             res.locals.subjectPath = subjectPath;
+            console.log("Transcribing subject(5/6), CAPT'N!");
             await transcribeAudio(req, res, 'subjectTranscription', subjectPath);
 
             const subjectTxtFilePath = res.locals.subjectTranscription;
@@ -75,6 +76,7 @@ transcriptionController.getAudio = async (req, res, next) => {
             // Download and transcribe the other audio file
             const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
             res.locals.audioPath = audioPath;
+            console.log("Transcribing recording(5/6), CAPT'N!");
             await transcribeAudio(req, res, 'transcription', audioPath);
 
             // Convert .txt to PDF and Word
@@ -150,11 +152,11 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-    const outputDir = path.join(__dirname, '..', 'output');
+    const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
 
     console.log('Executing shell command:', command);
     
@@ -163,6 +165,22 @@ const transcribeAudio = (req, res, key, audioPath) => {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
         return;
+      }
+
+      res.locals.diarization = false
+
+      if (!res.locals.diarization) {
+        console.log("Skipping JSON processing as diarization is false");
+
+        // Check if the output text file exists
+        if (!fs.existsSync(txtOutputPath)) {
+          console.error(`Text file does not exist at: ${txtOutputPath}`);
+          return reject('Text file does not exist.');
+        }
+
+        // Save the path to res.locals[key]
+        res.locals[key] = txtOutputPath;
+        return resolve();
       }
 
       console.log("Proceeding to JSON to TXT conversion");
@@ -271,11 +289,11 @@ transcriptionController.transcribe = async (req, res, next) => {
 
   res.locals.email = email;
 
-  const outputDir = path.resolve('./src/server/output'); // Define your output directory here
+  const outputDir = path.resolve('./src/server/outputs'); // Define your output directory here
   const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
   const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-  const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+  const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
 
   console.log('Executing shell command:', command);
   
@@ -284,6 +302,21 @@ transcriptionController.transcribe = async (req, res, next) => {
       console.error(`Error: ${error.message}`);
       console.error(`stderr: ${stderr}`);
       return;
+    }
+    res.locals.diarization = false
+
+    if (!res.locals.diarization) {
+      console.log("Skipping JSON processing as diarization is false");
+
+      // Check if the output text file exists
+      if (!fs.existsSync(txtOutputPath)) {
+        console.error(`Text file does not exist at: ${txtOutputPath}`);
+        return reject('Text file does not exist.');
+      }
+
+      // Save the path to res.locals[key]
+      res.locals.outputFilePath = txtOutputPath;
+      return next();
     }
 
     console.log("Proceeding to JSON to TXT conversion");

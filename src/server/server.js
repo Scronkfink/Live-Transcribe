@@ -50,12 +50,12 @@ app.use((req, res, next) => {
   next();
 });
 
-const outputDir = path.join(__dirname, 'output');
+const outputDir = path.join(__dirname, 'outputs');
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir);
 }
 
-app.use('/downloads', express.static(path.join(__dirname, 'output')));
+app.use('/downloads', express.static(path.join(__dirname, 'outputs')));
 
 app.use('/app', appServer);
 
@@ -75,7 +75,7 @@ app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
 
 app.post('/api/twilioTranscription', 
   twilioController.handleTranscription, 
-  transcriptionController.getAudio,  
+  transcriptionController.twilioTranscribe,  
   emailController.sendTranscript
 );
 
