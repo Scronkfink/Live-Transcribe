@@ -3,6 +3,11 @@ const PDFDocument = require('pdfkit');
 const { Document, Packer, Paragraph, TextRun } = require('docx');
 const path = require('path');
 
+const sanitizeText = (text) => {
+  // Remove any non-printable characters or control characters
+  return text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+};
+
 const convertTxtToPdf = (txtFilePath, pdfFilePath) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument();
