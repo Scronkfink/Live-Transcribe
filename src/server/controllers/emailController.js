@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const User = require('../models/userModel.js');
 
 const emailController = {};
 
@@ -48,15 +49,53 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+async function updateLatestTranscription(res) {
+  const summaryBuffer = res.locals.summary; // Access the PDF buffer from res.locals
+
+  try {
+    // Read the subject transcription text from the file
+    const subjectTranscriptionPath = res.locals.subjectTranscription;
+    let subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
+
+    // Use a regular expression to remove everything up to and including the first " - "
+    subjectTranscriptionText = subjectTranscriptionText.replace(/^.*? - /, '');
+
+    // Find the user by their ID (assuming you have a User model)
+    const phoneNumber = res.locals.number;
+    const user = await User.findOne({ phone: phoneNumber });
+
+    if (!user || user.transcriptions.length === 0) {
+      console.error('User not found or no transcriptions available.');
+      return;
+    }
+
+    // Access the latest transcription in the array
+    const latestTranscription = user.transcriptions[user.transcriptions.length - 1];
+
+    // Update the subject, set the completed property to true, and add the summary PDF buffer
+    latestTranscription.subject = subjectTranscriptionText;
+    latestTranscription.completed = true;
+    latestTranscription.summary = summaryBuffer; // Save the summary buffer to the transcription
+
+    // Save the updated user document
+    await user.save();
+
+    console.log('Successfully updated the latest transcription with the new subject, marked it as completed, and saved the summary PDF.');
+  } catch (error) {
+    console.error('Error updating the latest transcription:', error);
+  }
+}
+
 emailController.sendTranscript = async (req, res, next) => {
+
+  console.log("In emailController.sendTranscript(7/7)");
+
   const email = res.locals.email;
   const user = res.locals.user;
+  const summaryBuffer = res.locals.summary;
 
   cleanupExpiredFiles();
-
-  if (email === "") {
-    return next();
-  }
+  updateLatestTranscription(res);
 
   try {
     // Extract the text from the "subject" transcription
@@ -75,27 +114,34 @@ emailController.sendTranscript = async (req, res, next) => {
     const transcriptionWordPath = res.locals.transcriptionWordPath;
 
     // Create mail options
+    const sanitizedSubject = subjectTranscriptionText.trim();
+
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
-      subject: subjectTranscriptionText, // Use the subject transcription as the email subject
+      subject: sanitizedSubject, // Use the sanitized subject transcription as the email subject
       html: htmlContent,
       attachments: [
         {
-          filename: 'transcription.pdf',
+          filename: `${sanitizedSubject}.pdf`, // Set the filename to the sanitized subject transcription text
           path: transcriptionPdfPath,
           contentType: 'application/pdf'
         },
         {
-          filename: 'transcription.docx',
+          filename: `${sanitizedSubject}.docx`,
           path: transcriptionWordPath,
           contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        },
+        {
+          filename: 'summary.pdf', // Set the filename for the summary PDF
+          content: summaryBuffer, // Attach the summary buffer directly
+          contentType: 'application/pdf'
         }
       ]
     };
 
     console.log('Sending email...');
-    await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions); 
     console.log('Email sent successfully!');
   } catch (error) {
     console.error('Error sending email:', error);
@@ -103,6 +149,7 @@ emailController.sendTranscript = async (req, res, next) => {
   }
   return next();
 };
+
 
 emailController.uploadTranscript = async (req, res, next) => {
   const email = res.locals.email;

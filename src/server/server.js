@@ -10,7 +10,7 @@ const appServer = require('./appServer');
 const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
 const emailController = require('./controllers/emailController');
-const summarizationController = require('./appControllers/summarizationController');
+const summarizationController = require('./controllers/summarizationController');
 const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 const app = express();
@@ -75,7 +75,8 @@ app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
 
 app.post('/api/twilioTranscription', 
   twilioController.handleTranscription, 
-  transcriptionController.twilioTranscribe,  
+  transcriptionController.twilioTranscribe,
+  summarizationController.summarize,  
   emailController.sendTranscript
 );
 

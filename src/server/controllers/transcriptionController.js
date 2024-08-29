@@ -17,9 +17,15 @@ const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
+const getAudioLengthFromTwilio = async (recordingUrl) => {
+  const recordingSid = recordingUrl.split('/').pop();
+  const recording = await client.recordings(recordingSid).fetch();
+  return recording.duration;
+};
+
 transcriptionController.twilioTranscribe = async (req, res, next) => {
 
-  console.log("In transcriptionController.twilioTranscribe(5/6)");
+  console.log("In transcriptionController.twilioTranscribe(5/7)");
 
   const phoneNumber = res.locals.number;
 
@@ -68,10 +74,18 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
             const subjectTxtFilePath = res.locals.subjectTranscription;
             const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8');
 
+            const audioLength = await getAudioLengthFromTwilio(audioUrl);
+            console.log(`Audio length: ${audioLength} seconds`);
+
             await User.updateOne(
-            { phone: phoneNumber },
-            { $set: { "transcriptions.$[elem].subject": subjectData } },
-            { arrayFilters: [{ "elem.subject": subjectUrl }] }
+              { phone: phoneNumber },
+              { 
+                $set: { 
+                  "transcriptions.$[elem].subject": subjectData,
+                  "transcriptions.$[elem].length": audioLength  // Set the length property to the audioLength
+                } 
+              },
+              { arrayFilters: [{ "elem.subject": subjectUrl }] }
             );
             // Download and transcribe the other audio file
             const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
@@ -99,10 +113,20 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
             // Read the PDF file as binary data
             const pdfData = fs.readFileSync(pdfFilePath);
 
-            // Update the user's transcription in the database with the PDF data
+            // Calculate the PDF file size in KB
+            const pdfSizeInBytes = fs.statSync(pdfFilePath).size;
+            const pdfSizeInKB = (pdfSizeInBytes / 1024).toFixed(2); // Convert to KB and round to 2 decimal places
+            const pdfSizeFormatted = `${pdfSizeInKB} KB`;
+
+            // Update the user's transcription in the database with the PDF data and pdfSize
             await User.updateOne(
               { phone: phoneNumber },
-              { $set: { "transcriptions.$[elem].pdf": pdfData } },
+              { 
+                $set: { 
+                  "transcriptions.$[elem].pdf": pdfData,
+                  "transcriptions.$[elem].pdfSize": pdfSizeFormatted  // Set the pdfSize property
+                } 
+              },
               { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
             );
 
@@ -150,15 +174,13 @@ const transcribeAudio = (req, res, key, audioPath) => {
       return reject('Audio file does not exist.');
     }
 
-    console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
+    console.log(`TRANSCRIPTION IN PROCESS CAPT'N`);
 
     const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
     const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
-
-    console.log('Executing shell command:', command);
     
     exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
       if (error) {

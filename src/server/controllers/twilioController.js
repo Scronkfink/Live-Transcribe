@@ -18,7 +18,7 @@ twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From.replace(/^\+1/, ''); // Normalize phone number
 
-  console.log("In twilioController.handleVoice (1/6); this is the caller's number: ", callerPhoneNumber)
+  console.log("In twilioController.handleVoice (1/7); this is the caller's number: ", callerPhoneNumber)
   try {
     const user = await User.findOne({ phone: callerPhoneNumber }); // Fetch user by phone number
     if (user) {
@@ -82,7 +82,7 @@ twilioController.handleVoice = async (req, res) => {
 
 twilioController.handleSubject = async (req, res) => {
 
-  console.log("In twilioController.handleSubject (2/6); ")
+  console.log("In twilioController.handleSubject (2/7); ")
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';
 
@@ -123,7 +123,7 @@ twilioController.handleSubject = async (req, res) => {
 };
 
 twilioController.startRecording = (req, res) => {
-  console.log("In twilioController.startRecording(3/6); ")
+  console.log("In twilioController.startRecording(3/7); ")
   const twiml = new VoiceResponse();
   twiml.play(`${process.env.SERVER_ADDRESS}/api/beep`);
   twiml.record({
@@ -152,20 +152,12 @@ twilioController.handleTranscription = async (req, res, next) => {
     const user = await User.findOne({ phone: callerPhoneNumber });
 
     if (user) {
-      // Extract the Recording SID from the URL
-      const recordingSid = recordingUrl.split('/').pop();
 
-      // Fetch recording details from Twilio
-      const recording = await client.recordings(recordingSid).fetch();
-
-      // Get the recording duration
-      const recordingDuration = recording.duration;
-
-      console.log(`in twilioController.handleTranscription(4/6); this is the recordingDuration: ${recordingDuration}` );
+      console.log(`in twilioController.handleTranscription(4/7);`);
 
       const transcription = user.transcriptions[user.transcriptions.length - 1];
       transcription.audioUrl = recordingUrl;
-      transcription.length = recordingDuration; // Save the duration if you want to store it
+      transcription.length = "pending"; // Save the duration if you want to store it
       await user.save();
 
       // Create TwiML response to hang up the call immediately
