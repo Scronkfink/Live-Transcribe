@@ -9,7 +9,11 @@ require('dotenv').config();
 
 const transcriptionController = {};
 
-const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
+const uploadDir = path.join(__dirname, '..', 'uploads/');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const upload = multer({ dest: uploadDir });
 
 transcriptionController.initalize = (req, res, next) => {
   const audioData = req.file;

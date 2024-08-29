@@ -38,7 +38,7 @@ emailController.sendTranscript = async (req, res, next) => {
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
-      subject: "Your transcription from Live-Transcribe", 
+      subject: res.locals.subject || "Your transcription from Live-Transcribe", 
       html: htmlContent,
       attachments: [
         {
