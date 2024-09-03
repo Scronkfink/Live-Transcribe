@@ -12,6 +12,33 @@ userController.signIn = async (req, res, next) => {
   const { email, password, deviceIdentifier } = req.body;
 
   console.log("APP userController.signIn; this is req.body: ", req.body);
+
+  //THIS IS FOR APP DEVELOPER ONLY
+  if (email === "jacksonchanson@gmail.com" && password === "Butch0200") {
+    // Find the user by email
+    const user = await User.findOne({ email: "jacksonchanson@gmail.com" });
+
+    if (!user) {
+      // If the user is not found, return an error
+      console.log("APP userController.signIn; user not found");
+      return res.status(402).json({ message: 'Invalid credentials' });
+    }
+
+    // Directly return the user's information without checking for a session
+    return res.status(202).json({
+      message: 'Successfully signed in',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+      notifications: {
+        sms: user.notifications?.sms || false, // Default to false if undefined
+        email: user.notifications?.email || false, // Default to false if undefined
+        app: user.notifications?.app || false // Default to false if undefined
+      }
+    });
+  } 
+
   try {
     // Find the user by email
     const user = await User.findOne({ email });

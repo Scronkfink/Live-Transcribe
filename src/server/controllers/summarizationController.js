@@ -27,7 +27,7 @@ summarizationController.summarize = async (req, res, next) => {
       errorOutput += data.toString();
     });
 
-    ollamaProcess.on('close', async (code) => {
+    ollamaProcess.on('close', async (code) => { 
       if (code !== 0) {
         console.error(`ollama process exited with code ${code}`);
         console.error(`stderr: ${errorOutput}`);

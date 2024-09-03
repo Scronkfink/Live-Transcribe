@@ -72,7 +72,7 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
             await transcribeAudio(req, res, 'subjectTranscription', subjectPath);
 
             const subjectTxtFilePath = res.locals.subjectTranscription;
-            const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8');
+            const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8').trim();
 
             const audioLength = await getAudioLengthFromTwilio(audioUrl);
             console.log(`Audio length: ${audioLength} seconds`);
@@ -81,8 +81,8 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
               { phone: phoneNumber },
               { 
                 $set: { 
-                  "transcriptions.$[elem].subject": subjectData,
-                  "transcriptions.$[elem].length": audioLength  // Set the length property to the audioLength
+                  "transcriptions.$[elem].subject": subjectData.replace(/\r\n/g, '').trim(),
+                  "transcriptions.$[elem].length": audioLength.toString()  // Set the length property to the audioLength
                 } 
               },
               { arrayFilters: [{ "elem.subject": subjectUrl }] }
@@ -97,11 +97,11 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
             const txtFilePath = res.locals.transcription;
             const transcriptionData = fs.readFileSync(txtFilePath, 'utf8');
 
-            await User.updateOne(
-            { phone: phoneNumber },
-            { $set: { "transcriptions.$[elem].body": transcriptionData } },
-            { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
-            );
+            // await User.updateOne(
+            // { phone: phoneNumber },
+            // { $set: { "transcriptions.$[elem].body": transcriptionData } },
+            // { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
+            // );
 
             // Convert .txt to PDF and Word
             const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
