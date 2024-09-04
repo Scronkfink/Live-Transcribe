@@ -152,10 +152,21 @@ userController.signUp = async (req, res, next) => {
 
   console.log("APP userController.signUp; this is req.body: ", req.body);
 
+  // Check if any necessary information is missing
+  if (!email || !phone || !password || !firstName || !lastName || !deviceIdentifier) {
+    return res.status(402).json({ message: 'Missing necessary information' });
+  }
+
   // Remove dashes from phone number
   phone = phone.replace(/-/g, "");
 
-  res.locals.phone = phone
+  // Validate the phone number (assuming a U.S. phone number format)
+  const phoneRegex = /^[2-9]{1}[0-9]{2}[0-9]{3}[0-9]{4}$/;
+  if (!phoneRegex.test(phone)) {
+    return res.status(405).json({ message: 'Invalid phone number format' });
+  }
+
+  res.locals.phone = phone;
 
   try {
     // Check if the user already exists
@@ -176,7 +187,7 @@ userController.signUp = async (req, res, next) => {
         email: true,
         sms: true,
         app: true
-      } // Save the device identifier
+      }
     });
 
     // Save the user to the database
@@ -187,7 +198,6 @@ userController.signUp = async (req, res, next) => {
 
   } catch (error) {
     // Handle any errors that occur during the process
-
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
   }
@@ -483,5 +493,96 @@ userController.updateNotifications = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+userController.updateInfo = async (req, res) => {
+
+  console.log("APP; in userController.updateInfo; this is req.body: ", req.body)
+
+  const { email, phone, newEmail, newPhone } = req.body;
+
+  // Ensure the current email and phone are provided
+  if (!email || !phone) {
+    return res.status(400).json({ message: 'Current email and phone are required' });
+  }
+
+  try {
+    // Find the user by current email and phone
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update the user's email if a new one is provided
+    if (newEmail) {
+      
+      // Check if the new email already exists in the database
+      const existingEmailUser = await User.findOne({ email: newEmail });
+      if (existingEmailUser) {
+        console.log("New email is already in use")
+        return res.status(409).json({ message: 'New email is already in use' });
+      }
+      user.email = newEmail;
+    }
+
+    // Update the user's phone if a new one is provided
+    if (newPhone) {
+      // Check if the new phone already exists in the database
+      const existingPhoneUser = await User.findOne({ phone: newPhone });
+      if (existingPhoneUser) {
+        console.log("New phone is already in use")
+        return res.status(409).json({ message: 'New phone number is already in use' });
+      }
+      user.phone = newPhone;
+    }
+
+    // Save the updated user information
+    await user.save();
+    console.log("User successfully updated!")
+
+    return res.status(202).json({
+      message: 'Successfully updated user',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+      notifications: {
+        sms: user.notifications?.sms || false, // Default to false if undefined
+        email: user.notifications?.email || false, // Default to false if undefined
+        app: user.notifications?.app || false // Default to false if undefined
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user info:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.deleteAccount = async (req, res) => {
+  console.log("APP; userController.deleteAccount; this is req.body: ", req.body)
+  const { phone } = req.body;  // Extract phone number from request body
+
+  if (!phone) {
+      return res.status(400).json({ error: "Phone number is required" });
+  }
+
+  try {
+      // Find and delete the user by phone number
+      const deletedUser = await User.findOneAndDelete({ phone });
+
+      if (!deletedUser) {
+          return res.status(404).json({ error: "User not found" });
+      }
+
+      // If deletion is successful
+      console.log(`Account: ${phone} successfully deleted`);
+      return res.status(202).json({ message: "Account successfully deleted" });
+  } catch (error) {
+      // Handle any errors during the deletion process
+      console.log("Error deleting account:", error);
+      return res.status(500).json({ error: "Server error. Could not delete account." });
+  }
+};
+
 
 module.exports = userController;

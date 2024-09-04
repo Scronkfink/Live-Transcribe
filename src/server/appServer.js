@@ -32,6 +32,8 @@ router.post('/getTranscriptions', userController.getTranscriptions);
 router.post('/getPDF', userController.getPDF);
 router.post('/getSummary', userController.getSummary);
 router.post('/notifications', userController.updateNotifications);
+router.post('/updateInfo', userController.updateInfo);
+router.post('/deleteAccount', userController.deleteAccount)
 
 router.post('/uploadFile', upload.single('file'), setAudioPath, userController.createTranscription, transcriptionController.transcribe, summarizationController.summarize, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript, (req, res) => {
   res.send({ transcription: res.locals.transcription });
