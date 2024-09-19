@@ -51,7 +51,7 @@ const transporter = nodemailer.createTransport({
 emailController.sendTranscript = async (req, res, next) => {
   console.log("APP; emailController.sendTranscript (7/7);");
 
-  const audioFilePath = res.locals.audioFilePath
+  const audioFilePath = res.locals.audioFilePath;
 
   cleanupExpiredFiles();
 
@@ -64,17 +64,18 @@ emailController.sendTranscript = async (req, res, next) => {
       }
     });
   }
-  
+
   if (!res.locals.emailNotification) {
     console.log("Email notifications are disabled. Skipping email notification.");
-    return next(); 
+    return next();
   }
 
   const email = res.locals.email;
+  const emails = res.locals.emails || []; // Get the array of additional emails, if any
   const user = res.locals.user;
 
-  if (!email) {
-    return next();
+  if (!email && (!emails || emails.length === 0)) {
+    return next(); // No email to send to
   }
 
   try {
@@ -84,28 +85,34 @@ emailController.sendTranscript = async (req, res, next) => {
     const transcriptionPdfPath = res.locals.transcriptionPdfPath;
     const transcriptionWordPath = res.locals.transcriptionWordPath;
 
+    // Collect all recipients: the main email and any additional emails in the array
+    let allRecipients = [email];
+    if (emails && emails.length > 0) {
+      allRecipients = allRecipients.concat(emails);
+    }
+
     const mailOptions = {
       from: process.env.EMAIL,
-      to: email,
+      to: allRecipients,
       subject: res.locals.subject || "Your transcription from Live-Transcribe", 
       html: htmlContent,
       attachments: [
         {
-          filename: 'transcription.pdf',
+          filename: `${res.locals.subject}.pdf` || 'transcription.pdf',
           path: transcriptionPdfPath,
           contentType: 'application/pdf'
         },
         {
-          filename: 'transcription.docx',
+          filename: `${res.locals.subject}.docx` || 'transcription.docx',
           path: transcriptionWordPath,
           contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         }
       ]
     };
 
-    console.log('Sending email...');
+    console.log('Sending email to:', allRecipients);
     await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully!');
+    console.log('Email(s) sent successfully!');
   } catch (error) {
     console.error('Error sending email:', error);
     return next(error);
@@ -113,6 +120,7 @@ emailController.sendTranscript = async (req, res, next) => {
 
   return next();
 };
+
 
 
 

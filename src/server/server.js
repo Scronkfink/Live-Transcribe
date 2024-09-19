@@ -17,6 +17,13 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
+// app.use((req, res, next) => {
+//   console.log(`${req.method} ${req.url}`);
+//   console.log('Request Headers:', req.headers);
+//   console.log('Request Body:', req.body);
+//   next();
+// });
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../../dist')));
 app.set('trust proxy', 1); 
@@ -25,30 +32,32 @@ app.set('trust proxy', 1);
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
-    // 'http://localhost:8080',
     'https://livetranscribe.org',
     'https://www.livetranscribe.org',
     process.env.SERVER_ADDRESS, // Your current NGROK URL (if applicable)
     'https://*.twilio.com',
+    'http://10.0.2.2',  // Android emulator (localhost equivalent)
+    'http://localhost'  // Android apps on physical devices
   ];
 
   const origin = req.headers.origin;
 
   if (origin && allowedOrigins.some(allowedOrigin => {
-    // Adjust the logic to handle wildcards or exact matches
     if (allowedOrigin.includes('*')) {
       const regex = new RegExp(allowedOrigin.replace(/\*/g, '.*'));
       return regex.test(origin);
     }
     return origin === allowedOrigin;
   })) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    // res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
   res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   next();
 });
+
 
 const outputDir = path.join(__dirname, 'outputs');
 if (!fs.existsSync(outputDir)) {

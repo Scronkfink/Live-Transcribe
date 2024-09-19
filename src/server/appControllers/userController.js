@@ -13,31 +13,31 @@ userController.signIn = async (req, res, next) => {
 
   console.log("APP userController.signIn; this is req.body: ", req.body);
 
-  //THIS IS FOR APP DEVELOPER ONLY
-  if (email === "jacksonchanson@gmail.com" && password === "Butch0200") {
-    // Find the user by email
-    const user = await User.findOne({ email: "jacksonchanson@gmail.com" });
+  // //THIS IS FOR APP DEVELOPER ONLY
+  // if (email === "jacksonchanson@gmail.com" && password === "Butch0200") {
+  //   // Find the user by email
+  //   const user = await User.findOne({ email: "jacksonchanson@gmail.com" });
 
-    if (!user) {
-      // If the user is not found, return an error
-      console.log("APP userController.signIn; user not found");
-      return res.status(402).json({ message: 'Invalid credentials' });
-    }
+  //   if (!user) {
+  //     // If the user is not found, return an error
+  //     console.log("APP userController.signIn; user not found");
+  //     return res.status(402).json({ message: 'Invalid credentials' });
+  //   }
 
-    // Directly return the user's information without checking for a session
-    return res.status(202).json({
-      message: 'Successfully signed in',
-      email: user.email,
-      phone: user.phone,
-      name: user.name,
-      deviceIdentifier: user.deviceIdentifier, // Include the device identifier
-      notifications: {
-        sms: user.notifications?.sms || false, // Default to false if undefined
-        email: user.notifications?.email || false, // Default to false if undefined
-        app: user.notifications?.app || false // Default to false if undefined
-      }
-    });
-  } 
+  //   // Directly return the user's information without checking for a session
+  //   return res.status(202).json({
+  //     message: 'Successfully signed in',
+  //     email: user.email,
+  //     phone: user.phone,
+  //     name: user.name,
+  //     deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+  //     notifications: {
+  //       sms: user.notifications?.sms || false, // Default to false if undefined
+  //       email: user.notifications?.email || false, // Default to false if undefined
+  //       app: user.notifications?.app || false // Default to false if undefined
+  //     }
+  //   });
+  // } 
 
   try {
     // Find the user by email
@@ -104,7 +104,7 @@ function generateSessionToken() {
 userController.authenticate = async (req, res) => {
 
   console.log("APP; in userController.authenticate; this is req.body: ", req.body)
-  const { email, code } = req.body;
+  const { email, code, deviceIdentifier } = req.body;
 
   try {
     // Find the user by email
@@ -126,6 +126,7 @@ userController.authenticate = async (req, res) => {
       const sessionToken = generateSessionToken();
       const session = new Session({
         userId: user._id,
+        deviceIdentifier: deviceIdentifier,
         token: sessionToken,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
       });
@@ -581,6 +582,71 @@ userController.deleteAccount = async (req, res) => {
       // Handle any errors during the deletion process
       console.log("Error deleting account:", error);
       return res.status(500).json({ error: "Server error. Could not delete account." });
+  }
+};
+
+userController.checkSession = async (req, res) => {
+  console.log('APP; in userController.checkSession; this is req.body: ', req.body )
+  try {
+    const { deviceIdentifier } = req.body;
+
+    // Check if session exists with the given deviceIdentifier
+    const existingSession = await Session.findOne({ deviceIdentifier });
+
+    if (!existingSession) {
+      return res.status(402).json({ message: 'Session not found' });
+    }
+
+    // Find the user by userId from the session
+    const user = await User.findById(existingSession.userId);
+
+    if (!user) {
+      return res.status(402).json({ message: 'User not found' });
+    }
+
+    // Return the user info as requested
+    return res.status(202).json({
+      message: 'Successfully signed in without 2FA',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      sessionToken: existingSession.token, // Include the session token in the response
+      deviceIdentifier: existingSession.deviceIdentifier, // Include the device identifier
+      notifications: {
+        sms: user.notifications?.sms || false, // Default to false if undefined
+        email: user.notifications?.email || false, // Default to false if undefined
+        app: user.notifications?.app || false // Default to false if undefined
+      }
+    });
+  } catch (err) {
+    console.error('Error checking session:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+userController.signOut = async (req, res) => {
+  console.log("APP; in userController.signOut; this is req.body: ", req.body)
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find and delete the session associated with the user's userId
+    const deletedSession = await Session.findOneAndDelete({ userId: user._id });
+
+    if (!deletedSession) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    return res.status(202).json({ message: 'Successfully signed out' });
+  } catch (err) {
+    console.error('Error signing out:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 

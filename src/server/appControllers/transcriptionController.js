@@ -18,6 +18,7 @@ const upload = multer({ dest: uploadDir });
 transcriptionController.initialize = (req, res, next) => {
   const audioData = req.file;
   const { email, phone, name } = req.body;
+  res.locals.emails = req.body.emails
 
   console.log("APP, transcriptionController.initialize(1/7); this is req.body: ", req.body);
 
