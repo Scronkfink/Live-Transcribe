@@ -66,9 +66,10 @@ emailController.sendTranscript = async (req, res, next) => {
   }
 
   if (!res.locals.emailNotification) {
-    console.log("Email notifications are disabled. Skipping email notification.");
-    return next();
+    console.log("Email notifications are disabled. Sendin' 202.");
+    return res.status(202).json({ message: 'Email notifications are disabled' });
   }
+  
 
   const email = res.locals.email;
   const emails = res.locals.emails || []; // Get the array of additional emails, if any
@@ -118,7 +119,7 @@ emailController.sendTranscript = async (req, res, next) => {
     return next(error);
   }
 
-  return next();
+  return res.status(200).message("completed")
 };
 
 

@@ -7,7 +7,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-// Updated signIn function to check the user's credentials in the database
+
 userController.signIn = async (req, res, next) => {
   const { email, password, deviceIdentifier } = req.body;
 
@@ -54,7 +54,7 @@ userController.signIn = async (req, res, next) => {
 
     if (!isMatch) {
       // If the password does not match, return an error
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(402).json({ message: 'Invalid credentials' });
     }
 
     // Check for an existing valid session
@@ -62,7 +62,7 @@ userController.signIn = async (req, res, next) => {
 
     if (existingSession) {
 
-      existingSession.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Example: extend by 24 hours
+      existingSession.expiresAt = new Date(Date.now() + 168 * 60 * 60 * 1000); // Example: extend by 7 days
       await existingSession.save();
       // If a valid session exists, skip 2FA
       return res.status(202).json({
@@ -128,7 +128,7 @@ userController.authenticate = async (req, res) => {
         userId: user._id,
         deviceIdentifier: deviceIdentifier,
         token: sessionToken,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
+        expiresAt: new Date(Date.now() + 168 * 60 * 60 * 1000) // Set session to expire in 7 days
       });
       await session.save();
 
@@ -138,7 +138,7 @@ userController.authenticate = async (req, res) => {
       });
     } else {
       // If the code does not match or is expired, return an error
-      return res.status(401).json({ message: 'Invalid email or code' });
+      return res.status(402).json({ message: 'Invalid email or code' });
     }
   } catch (error) {
     console.error(error);
@@ -586,25 +586,29 @@ userController.deleteAccount = async (req, res) => {
 };
 
 userController.checkSession = async (req, res) => {
-  console.log('APP; in userController.checkSession; this is req.body: ', req.body )
+  console.log('APP; in userController.checkSession; this is req.body: ', req.body);
+
   try {
     const { deviceIdentifier } = req.body;
 
-    // Check if session exists with the given deviceIdentifier
-    const existingSession = await Session.findOne({ deviceIdentifier });
-
-    if (!existingSession) {
-      return res.status(402).json({ message: 'Session not found' });
-    }
-
-    // Find the user by userId from the session
-    const user = await User.findById(existingSession.userId);
+    // Find the user by the deviceIdentifier in the User collection
+    const user = await User.findOne({ deviceIdentifier });
 
     if (!user) {
+      console.log('User not found');
       return res.status(402).json({ message: 'User not found' });
     }
 
+    // Check if a session exists for the user (by their userId)
+    const existingSession = await Session.findOne({ userId: user._id });
+
+    if (!existingSession) {
+      console.log('Session not found');
+      return res.status(402).json({ message: 'Session not found' });
+    }
+
     // Return the user info as requested
+    console.log("User found: ", user.name)
     return res.status(202).json({
       message: 'Successfully signed in without 2FA',
       email: user.email,
@@ -623,6 +627,7 @@ userController.checkSession = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 userController.signOut = async (req, res) => {
   console.log("APP; in userController.signOut; this is req.body: ", req.body)

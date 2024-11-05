@@ -33,7 +33,7 @@ twilioController.twoFactor = async (req, res, next) => {
       return res.status(500).json({ message: 'Failed to update user with 2FA code' });
     }
 
-    console.log("Updated user with 2FA code:", updatedUser);
+    // console.log("Updated user with 2FA code:", updatedUser);
 
     // Send the 2FA code via SMS using Twilio
     const message = await client.messages.create({
@@ -42,7 +42,7 @@ twilioController.twoFactor = async (req, res, next) => {
       to: phone
     });
 
-    console.log("Sent 2FA code via SMS:", message.sid);
+    console.log("Sent 2FA code via SMS to: ", updatedUser.phone);
 
     res.status(202).json({ 
       message: '2FA code sent',
@@ -59,6 +59,22 @@ twilioController.twoFactor = async (req, res, next) => {
   } catch (error) {
     console.error("Error in twilioController.twoFactor:", error);
     res.status(500).json({ message: 'Failed to send 2FA code' });
+  }
+};
+
+twilioController.fallback = async (req, res, next) => {
+  const { MessageStatus } = req.body;
+
+  // Check if the message was delivered successfully
+  if (MessageStatus === 'delivered') {
+    console.log('Message delivered successfully.');
+    res.status(200).end(); // End the request once processed
+  } else if (MessageStatus === 'failed' || MessageStatus === 'undelivered') {
+    console.error('Failed to deliver the message.');
+    res.status(500).json({ message: 'Message delivery failed' });
+  } else {
+    console.log('Message status:', MessageStatus);
+    res.status(200).end(); // Acknowledge the status update
   }
 };
 
@@ -113,6 +129,6 @@ function generateSignedUrl(filePath, expiresIn = 3600) {
   return `${process.env.BASE_URL}/app/download?filePath=${encodeURIComponent(
     filePath
   )}&expires=${expirationTime}&signature=${signature}`;
-}
+};
 
 module.exports = twilioController;
