@@ -176,22 +176,17 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-    const outputDir = path.join(__dirname, '..', process.platform === 'win32' ? 'outputs' : 'output');
+    const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
+    const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    // Platform-specific script and shell paths
-    const scriptPath = process.platform === 'win32'
-      ? 'C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh'
-      : '/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh';
-    const shell = process.platform === 'win32'
-      ? 'C:/Program Files/Git/bin/bash.exe'
-      : '/bin/bash';
+    // Determine the command and shell path based on the platform
+    const command = process.platform === 'win32'
+        ? `"C:/Program Files/Git/bin/bash.exe" -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`
+        : `/bin/bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
 
-    const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
-
-    console.log('Executing shell command:', command);
-
-    exec(command, { shell: shell }, (error, stdout, stderr) => {
+    // Execute the command with the appropriate shell
+    exec(command, { shell: process.platform === 'win32' ? true : '/bin/bash' }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
@@ -262,7 +257,6 @@ const transcribeAudio = (req, res, key, audioPath) => {
         return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
       }).join('\n\n');
 
-      const txtOutputPath = jsonFilePath.replace('.json', '.txt');
       fs.writeFile(txtOutputPath, formattedText, (err) => {
         if (err) {
           console.error('Error writing to text file:', err);
@@ -274,6 +268,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
     });
   });
 };
+
 
 transcriptionController.transcribe = async (req, res, next) => {
   const audioPath = res.locals.audioPath;
