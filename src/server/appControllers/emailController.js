@@ -119,7 +119,7 @@ emailController.sendTranscript = async (req, res, next) => {
     return next(error);
   }
 
-  return res.status(200).message("completed")
+  return res.status(200).send("completed");
 };
 
 
