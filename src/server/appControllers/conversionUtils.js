@@ -3,15 +3,22 @@ const PDFDocument = require('pdfkit');
 const { Document, Packer, Paragraph, TextRun } = require('docx');
 const path = require('path');
 
+const sanitizeText = (text) => {
+  // Remove any non-printable characters or control characters
+  return text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+};
+
 const convertTxtToPdf = (txtFilePath, pdfFilePath) => {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument();
-    const txtStream = fs.createReadStream(txtFilePath);
+    const txtStream = fs.createReadStream(txtFilePath, { encoding: 'utf8' });
     const pdfStream = fs.createWriteStream(pdfFilePath);
 
     doc.pipe(pdfStream);
+
     txtStream.on('data', (chunk) => {
-      doc.text(chunk);
+      const sanitizedChunk = sanitizeText(chunk);
+      doc.text(sanitizedChunk);
     });
 
     txtStream.on('end', () => {
@@ -32,6 +39,7 @@ const convertStrToPDF = async (string, res) => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument();
+      const sanitizedString = sanitizeText(string);
 
       // Pipe the document to a buffer
       const buffers = [];
@@ -43,7 +51,7 @@ const convertStrToPDF = async (string, res) => {
       });
 
       // Add text to the document
-      doc.text(string, {
+      doc.text(sanitizedString, {
         x: 50,
         y: 50,
         width: 500,

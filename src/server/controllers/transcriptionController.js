@@ -17,8 +17,15 @@ const client = twilio(accountSid, authToken);
 
 const upload = multer({ dest: path.join(__dirname, '..', 'uploads/') });
 
-transcriptionController.getAudio = async (req, res, next) => {
-  console.log("In transcriptionController.getAudio; this is res.locals.number: ", res.locals.number);
+const getAudioLengthFromTwilio = async (recordingUrl) => {
+  const recordingSid = recordingUrl.split('/').pop();
+  const recording = await client.recordings(recordingSid).fetch();
+  return recording.duration;
+};
+
+transcriptionController.twilioTranscribe = async (req, res, next) => {
+
+  console.log("In transcriptionController.twilioTranscribe(5/7)");
 
   const phoneNumber = res.locals.number;
 
@@ -27,12 +34,11 @@ transcriptionController.getAudio = async (req, res, next) => {
     res.locals.user = user.name;
     res.locals.email = user.email;
 
+    //probably not a good idea to use the transcription identifier as the last recording in the array...but nobody eats 4 marshmallows
     if (user && user.transcriptions.length > 0) {
       const latestTranscription = user.transcriptions[user.transcriptions.length - 1];
       const audioUrl = latestTranscription.audioUrl;
-      const subjectUrl = latestTranscription.subject;
-
-      console.log("In transcriptionController.getAudio; this is audioUrl: ", audioUrl);
+      const subjectUrl = latestTranscription.subjectUrl;
 
       if (audioUrl && subjectUrl) {
         const downloadAudio = async (url, filename) => {
@@ -62,30 +68,40 @@ transcriptionController.getAudio = async (req, res, next) => {
           try {
             const subjectPath = await downloadAudio(subjectUrl, `subject-${user.phone}-${Date.now()}.mp3`);
             res.locals.subjectPath = subjectPath;
+            console.log("Transcribing subject(5/6), CAPT'N!");
             await transcribeAudio(req, res, 'subjectTranscription', subjectPath);
 
             const subjectTxtFilePath = res.locals.subjectTranscription;
-            const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8');
+            const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8').trim();
+
+            const audioLength = await getAudioLengthFromTwilio(audioUrl);
+            console.log(`Audio length: ${audioLength} seconds`);
 
             await User.updateOne(
-            { phone: phoneNumber },
-            { $set: { "transcriptions.$[elem].subject": subjectData } },
-            { arrayFilters: [{ "elem.subject": subjectUrl }] }
+              { phone: phoneNumber },
+              { 
+                $set: { 
+                  "transcriptions.$[elem].subject": subjectData.replace(/\r\n/g, '').trim(),
+                  "transcriptions.$[elem].length": audioLength.toString()  // Set the length property to the audioLength
+                } 
+              },
+              { arrayFilters: [{ "elem.subject": subjectUrl }] }
             );
             // Download and transcribe the other audio file
             const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
             res.locals.audioPath = audioPath;
+            console.log("Transcribing recording(5/6), CAPT'N!");
             await transcribeAudio(req, res, 'transcription', audioPath);
 
             // Convert .txt to PDF and Word
             const txtFilePath = res.locals.transcription;
             const transcriptionData = fs.readFileSync(txtFilePath, 'utf8');
 
-            await User.updateOne(
-            { phone: phoneNumber },
-            { $set: { "transcriptions.$[elem].body": transcriptionData } },
-            { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
-            );
+            // await User.updateOne(
+            // { phone: phoneNumber },
+            // { $set: { "transcriptions.$[elem].body": transcriptionData } },
+            // { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
+            // );
 
             // Convert .txt to PDF and Word
             const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
@@ -97,10 +113,20 @@ transcriptionController.getAudio = async (req, res, next) => {
             // Read the PDF file as binary data
             const pdfData = fs.readFileSync(pdfFilePath);
 
-            // Update the user's transcription in the database with the PDF data
+            // Calculate the PDF file size in KB
+            const pdfSizeInBytes = fs.statSync(pdfFilePath).size;
+            const pdfSizeInKB = (pdfSizeInBytes / 1024).toFixed(2); // Convert to KB and round to 2 decimal places
+            const pdfSizeFormatted = `${pdfSizeInKB} KB`;
+
+            // Update the user's transcription in the database with the PDF data and pdfSize
             await User.updateOne(
               { phone: phoneNumber },
-              { $set: { "transcriptions.$[elem].pdf": pdfData } },
+              { 
+                $set: { 
+                  "transcriptions.$[elem].pdf": pdfData,
+                  "transcriptions.$[elem].pdfSize": pdfSizeFormatted  // Set the pdfSize property
+                } 
+              },
               { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
             );
 
@@ -148,22 +174,35 @@ const transcribeAudio = (req, res, key, audioPath) => {
       return reject('Audio file does not exist.');
     }
 
-    console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
+    console.log(`TRANSCRIPTION IN PROCESS CAPT'N`);
 
-    const outputDir = path.join(__dirname, '..', 'output');
+    const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
-
+    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
     
-    console.log('Executing shell command:', command);
-
-    exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+    exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
-        return reject('Error during transcription.');
+        return;
+      }
+
+      res.locals.diarization = false
+
+      if (!res.locals.diarization) {
+        console.log("Skipping JSON processing as diarization is false");
+
+        // Check if the output text file exists
+        if (!fs.existsSync(txtOutputPath)) {
+          console.error(`Text file does not exist at: ${txtOutputPath}`);
+          return reject('Text file does not exist.');
+        }
+
+        // Save the path to res.locals[key]
+        res.locals[key] = txtOutputPath;
+        return resolve();
       }
 
       console.log("Proceeding to JSON to TXT conversion");
@@ -272,19 +311,34 @@ transcriptionController.transcribe = async (req, res, next) => {
 
   res.locals.email = email;
 
-  const outputDir = path.resolve('./src/server/output'); // Define your output directory here
+  const outputDir = path.resolve('./src/server/outputs'); // Define your output directory here
   const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
   const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-  const command = `bash -c "/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh '${audioPath}' '${outputDir}'"`;
+  const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
 
   console.log('Executing shell command:', command);
-
-  exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+  
+  exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error: ${error.message}`);
       console.error(`stderr: ${stderr}`);
       return;
+    }
+    res.locals.diarization = false
+
+    if (!res.locals.diarization) {
+      console.log("Skipping JSON processing as diarization is false");
+
+      // Check if the output text file exists
+      if (!fs.existsSync(txtOutputPath)) {
+        console.error(`Text file does not exist at: ${txtOutputPath}`);
+        return reject('Text file does not exist.');
+      }
+
+      // Save the path to res.locals[key]
+      res.locals.outputFilePath = txtOutputPath;
+      return next();
     }
 
     console.log("Proceeding to JSON to TXT conversion");

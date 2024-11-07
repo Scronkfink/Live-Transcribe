@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const transcriptionSchema = new mongoose.Schema({
   email: { type: String, required: true },
   subject: { type: String, required: true },
+  subjectUrl: { type: String, required: false },
   body: { type: String, required: false },
   audioUrl: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
@@ -27,12 +28,12 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   title: { type: String, required: false },
   company: { type: String, required: false },
+  diarization: {type: Boolean, required: false, default: false},
   transcriptions: [transcriptionSchema],
   notifications: notificationsSchema,
   twoFactorCode: { type: String, required: false },
   twoFactorExpires: { type: Date, required: false },
-  deviceIdentifier: { type: String, required: false },
-  diarization: {type: Boolean, required: false, default: false}
+  deviceIdentifier: { type: String, required: false }
 });
 
 // Pre-save hook to hash the password before saving the user

@@ -32,13 +32,18 @@ router.post('/getTranscriptions', userController.getTranscriptions);
 router.post('/getPDF', userController.getPDF);
 router.post('/getSummary', userController.getSummary);
 router.post('/notifications', userController.updateNotifications);
+router.post('/updateInfo', userController.updateInfo);
+router.post('/deleteAccount', userController.deleteAccount);
+router.post('/checkSession', userController.checkSession);
+router.post('/signOut', userController.signOut);
+router.post('/fallback', twilioController.fallback)
 
 router.post('/uploadFile', upload.single('file'), setAudioPath, userController.createTranscription, transcriptionController.transcribe, summarizationController.summarize, userController.uploadTranscription, twilioController.transcriptionReady, emailController.sendTranscript, (req, res) => {
   res.send({ transcription: res.locals.transcription });
 });
 
 
-const UPLOADS_DIR = path.join(__dirname, 'output');
+const UPLOADS_DIR = path.join(__dirname, 'outputs');
 const SECRET_KEY = process.env.SECRET_KEY;
 
 router.get('/download', (req, res) => {
