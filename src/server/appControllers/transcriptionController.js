@@ -123,9 +123,11 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-    const outputDir = path.join(__dirname, '..', 'output');
+    const outputDir = path.join(__dirname, '..', 'outputs');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
+
+    const diarization = res.locals.diarization
     
     // Determine the shell script and command based on the platform
     const scriptName = diarization ? 'run_transcription.sh' : 'run_transcription2.sh';
@@ -135,6 +137,7 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const shell = process.platform === 'win32'
         ? 'C:/Program Files/Git/bin/bash.exe'  // Windows shell path
         : '/bin/bash';  // Mac/Unix shell path
+    
     
     const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
     
@@ -147,17 +150,18 @@ const transcribeAudio = (req, res, key, audioPath) => {
         return reject('Error during transcription.');
       }
     
-      if (!diarization) {
-        console.log("Diarization is disabled. Skipping merging and formatting.");
-    
-        fs.writeFile(txtOutputPath, stdout, (err) => {
-          if (err) {
-            console.error('Error writing to text file:', err);
-            return reject('Error saving transcription text.');
-          }
-          res.locals[key] = txtOutputPath;
-          return resolve();
-        });
+      if (!res.locals.diarization) {
+        console.log("Skipping JSON processing as diarization is false");
+
+        // Check if the output text file exists
+        if (!fs.existsSync(txtOutputPath)) {
+          console.error(`Text file does not exist at: ${txtOutputPath}`);
+          return reject('Text file does not exist.');
+        }
+
+        // Save the path to res.locals[key]
+        res.locals[key] = txtOutputPath;
+        return resolve();
       } else {
         console.log("Proceeding to JSON to TXT conversion");
     
