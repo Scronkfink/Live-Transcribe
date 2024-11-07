@@ -176,46 +176,31 @@ const transcribeAudio = (req, res, key, audioPath) => {
 
     console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-const outputDir = path.join(__dirname, '..', process.platform === 'win32' ? 'outputs' : 'output');
-const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
-const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
+    const outputDir = path.join(__dirname, '..', process.platform === 'win32' ? 'outputs' : 'output');
+    const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
 
-// Use platform-specific script paths and shell executables
-const scriptPath = process.platform === 'win32'
-    ? 'C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh'
-    : '/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh';
-const shell = process.platform === 'win32'
-    ? 'C:/Program Files/Git/bin/bash.exe'
-    : '/bin/bash';
+    // Platform-specific script and shell paths
+    const scriptPath = process.platform === 'win32'
+      ? 'C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh'
+      : '/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh';
+    const shell = process.platform === 'win32'
+      ? 'C:/Program Files/Git/bin/bash.exe'
+      : '/bin/bash';
 
-const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
+    const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
 
-console.log('Executing shell command:', command);
+    console.log('Executing shell command:', command);
 
-exec(command, { shell: shell }, (error, stdout, stderr) => {
-  if (error) {
-    console.error(`Error: ${error.message}`);
-    console.error(`stderr: ${stderr}`);
-    return reject('Error during transcription.');
-  }
-
-  res.locals.diarization = false;  // Adjust as needed based on your program logic
-
-  if (!res.locals.diarization) {
-    console.log("Skipping JSON processing as diarization is false");
-
-    if (!fs.existsSync(txtOutputPath)) {
-      console.error(`Text file does not exist at: ${txtOutputPath}`);
-      return reject('Text file does not exist.');
-    }
-
-    res.locals[key] = txtOutputPath;
-    return resolve();
-  }
+    exec(command, { shell: shell }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        console.error(`stderr: ${stderr}`);
+        return reject('Error during transcription.');
+      }
 
       console.log("Proceeding to JSON to TXT conversion");
 
-      // Read the JSON file and parse it
+      // Process JSON output and create a formatted .txt file
       let transcriptionData;
       try {
         const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
@@ -230,21 +215,19 @@ exec(command, { shell: shell }, (error, stdout, stderr) => {
         const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
         return `${minutes}:${remainingSeconds}`;
       };
-      
+
       const mergeSegmentsBySpeaker = (segments) => {
         const mergedSegments = [];
         let currentSpeaker = null;
         let currentStartTime = null;
         let currentEndTime = null;
         let currentText = '';
-      
+
         segments.forEach((segment, index) => {
           if (segment.speaker === currentSpeaker) {
-            // If the same speaker, extend the end time and append the text
             currentEndTime = segment.end;
             currentText += ` ${segment.text.trim()}`;
           } else {
-            // If it's a new speaker or the first segment, push the previous segment to the array
             if (currentSpeaker !== null) {
               mergedSegments.push({
                 speaker: currentSpeaker,
@@ -253,15 +236,11 @@ exec(command, { shell: shell }, (error, stdout, stderr) => {
                 text: currentText.trim()
               });
             }
-      
-            // Start tracking the new speaker's segment
             currentSpeaker = segment.speaker;
             currentStartTime = segment.start;
             currentEndTime = segment.end;
             currentText = segment.text.trim();
           }
-      
-          // Push the last segment after the loop ends
           if (index === segments.length - 1) {
             mergedSegments.push({
               speaker: currentSpeaker,
@@ -271,21 +250,19 @@ exec(command, { shell: shell }, (error, stdout, stderr) => {
             });
           }
         });
-      
         return mergedSegments;
       };
-      
+
       const mergedSegments = mergeSegmentsBySpeaker(transcriptionData.segments);
-      
+
       const formattedText = mergedSegments.map(segment => {
         const startTime = formatTime(segment.startTime);
         const endTime = formatTime(segment.endTime);
         const text = segment.text;
-      
         return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
       }).join('\n\n');
 
-      // Write the formatted text to a .txt file
+      const txtOutputPath = jsonFilePath.replace('.json', '.txt');
       fs.writeFile(txtOutputPath, formattedText, (err) => {
         if (err) {
           console.error('Error writing to text file:', err);
