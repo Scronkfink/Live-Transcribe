@@ -10,7 +10,7 @@ const appServer = require('./appServer');
 const twilioController = require('./controllers/twilioController');
 const userController = require('./controllers/userController');
 const emailController = require('./controllers/emailController');
-const summarizationController = require('./appControllers/summarizationController');
+const summarizationController = require('./controllers/summarizationController');
 const { upload, transcriptionController } = require('./controllers/transcriptionController');
 
 const app = express();
@@ -21,28 +21,28 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../../dist')));
 app.set('trust proxy', 1); 
 
-//CORS
+// CORS Configuration
 app.use((req, res, next) => {
   const allowedOrigins = [
     'https://live-transcribe-38d0d2c8a46e.herokuapp.com',
-    // 'http://localhost:8080',
     'https://livetranscribe.org',
     'https://www.livetranscribe.org',
     process.env.SERVER_ADDRESS, // Your current NGROK URL (if applicable)
     'https://*.twilio.com',
+    'http://10.0.2.2',  // Android emulator (localhost equivalent)
+    'http://localhost'  // Android apps on physical devices
   ];
 
   const origin = req.headers.origin;
 
   if (origin && allowedOrigins.some(allowedOrigin => {
-    // Adjust the logic to handle wildcards or exact matches
     if (allowedOrigin.includes('*')) {
       const regex = new RegExp(allowedOrigin.replace(/\*/g, '.*'));
       return regex.test(origin);
     }
     return origin === allowedOrigin;
   })) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
   res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
@@ -50,43 +50,32 @@ app.use((req, res, next) => {
   next();
 });
 
-const outputDir = path.join(__dirname, 'output');
+// Ensure Outputs Directory Exists
+const outputDir = path.join(__dirname, 'outputs');
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir);
 }
 
-app.use('/downloads', express.static(path.join(__dirname, 'output')));
-
+app.use('/downloads', express.static(path.join(__dirname, 'outputs')));
 app.use('/app', appServer);
 
-app.post('/api/voice', twilioController.handleVoice, (req, res) => {
-  res.send({ message: 'Voice endpoint hit' });
-});
-
-app.get('/summarize', summarizationController.summarize);
-
-app.post('/api/subject', twilioController.handleSubject, (req, res) => {
-  res.send({ message: 'Subject endpoint hit' });
-});
-
-app.post('/api/startRecording', twilioController.startRecording, (req, res) => {
-  res.send({ message: 'Start recording endpoint hit' });
-});
-
+// Twilio Webhook Endpoints
+app.post('/api/voice', twilioController.handleVoice);
+app.post('/api/subject', twilioController.handleSubject);
+app.post('/api/addParticipant', twilioController.addParticipant);
+app.post('/api/joinConference', twilioController.joinConference);
+app.post('/api/joinConferenceCall', twilioController.joinConferenceCall);
+app.post('/api/startRecording', twilioController.startRecording);
 app.post('/api/twilioTranscription', 
   twilioController.handleTranscription, 
-  transcriptionController.getAudio,  
+  transcriptionController.twilioTranscribe,
+  summarizationController.summarize,  
   emailController.sendTranscript
 );
+app.post('/api/status', twilioController.handleStatus);
+app.post('/api/fallback', twilioController.handleFallback);
 
-app.post('/api/status', twilioController.handleStatus, (req, res) => {
-  res.send({ message: 'Status endpoint hit' });
-});
-
-app.post('/api/fallback', twilioController.handleFallback, (req, res) => {
-  res.send({ message: 'Fallback endpoint hit' });
-});
-
+// Transcription Endpoint
 const setAudioPath = (req, res, next) => {
   if (req.file && req.file.path) {
     res.locals.audioPath = req.file.path;
@@ -102,12 +91,14 @@ app.post('/api/transcription', upload.single('file'), setAudioPath, transcriptio
   res.send({ transcription: res.locals.transcription });
 });
 
+// Email Test Endpoint
 app.post("/api/email", emailController.test, (req, res) => {
   res.send({ message: 'Email Sent' });
 });
 
+// Serve Pre-recorded Audio Files
 app.get('/api/intro', (req, res) => {
-  const filePath = path.join(__dirname, 'voices', 'britishIntro.mp3');
+  const filePath = path.join(__dirname, 'voices', 'intro.mp3');
   res.sendFile(filePath);
 });
 
@@ -126,6 +117,7 @@ app.get('/api/end', (req, res) => {
   res.sendFile(filePath);
 });
 
+// Serve Personalized Messages
 app.get('/api/personalized/:filename', (req, res) => {
   const filename = req.params.filename;
   const filePath = path.join(outputDir, filename);
@@ -138,19 +130,23 @@ app.get('/api/personalized/:filename', (req, res) => {
   });
 });
 
+// User Endpoint
 app.post("/api/user", userController.addUser, (req, res) => {
   res.send({ message: 'User endpoint hit' });
 });
 
+// Catch-All Route to Serve Frontend
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../dist/index.html'));
 });
 
+// Start Server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
+// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
 }).then(() => console.log('Connected to Database'))
   .catch(err => console.error('Could not connect to MongoDB...', err));

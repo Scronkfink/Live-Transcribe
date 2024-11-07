@@ -14,7 +14,7 @@ echo "OUTPUT_DIR: $OUTPUT_DIR"
 # Run the whisperx command with diarization
 echo "Starting WhisperX with diarization..."
 
-conda run -n whisperx whisperx "$AUDIO_PATH" \
+conda run -n whisperx_env whisperx "$AUDIO_PATH" \
 --hf_token $HF_TOKEN \
 --model large-v2 --language en --compute_type int8 --batch_size 16 --diarize --highlight_words True \
 --output_dir "$OUTPUT_DIR" --output_format json

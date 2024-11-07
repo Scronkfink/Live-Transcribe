@@ -7,18 +7,46 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-// Updated signIn function to check the user's credentials in the database
+
 userController.signIn = async (req, res, next) => {
   const { email, password, deviceIdentifier } = req.body;
 
   console.log("APP userController.signIn; this is req.body: ", req.body);
+
+  // //THIS IS FOR APP DEVELOPER ONLY
+  // if (email === "jacksonchanson@gmail.com" && password === "Butch0200") {
+  //   // Find the user by email
+  //   const user = await User.findOne({ email: "jacksonchanson@gmail.com" });
+
+  //   if (!user) {
+  //     // If the user is not found, return an error
+  //     console.log("APP userController.signIn; user not found");
+  //     return res.status(402).json({ message: 'Invalid credentials' });
+  //   }
+
+  //   // Directly return the user's information without checking for a session
+  //   return res.status(202).json({
+  //     message: 'Successfully signed in',
+  //     email: user.email,
+  //     phone: user.phone,
+  //     name: user.name,
+  //     deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+  //     notifications: {
+  //       sms: user.notifications?.sms || false, // Default to false if undefined
+  //       email: user.notifications?.email || false, // Default to false if undefined
+  //       app: user.notifications?.app || false // Default to false if undefined
+  //     }
+  //   });
+  // } 
+
   try {
     // Find the user by email
     const user = await User.findOne({ email });
 
     if (!user) {
       // If the user is not found, return an error
-      return res.status(401).json({ message: 'Invalid credentials' });
+      console.log("APP userController.signIn; user not found")
+      return res.status(402).json({ message: 'Invalid credentials' });
     }
 
     // Compare the provided password with the hashed password in the database
@@ -26,7 +54,7 @@ userController.signIn = async (req, res, next) => {
 
     if (!isMatch) {
       // If the password does not match, return an error
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(402).json({ message: 'Invalid credentials' });
     }
 
     // Check for an existing valid session
@@ -34,7 +62,7 @@ userController.signIn = async (req, res, next) => {
 
     if (existingSession) {
 
-      existingSession.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Example: extend by 24 hours
+      existingSession.expiresAt = new Date(Date.now() + 168 * 60 * 60 * 1000); // Example: extend by 7 days
       await existingSession.save();
       // If a valid session exists, skip 2FA
       return res.status(202).json({
@@ -76,7 +104,7 @@ function generateSessionToken() {
 userController.authenticate = async (req, res) => {
 
   console.log("APP; in userController.authenticate; this is req.body: ", req.body)
-  const { email, code } = req.body;
+  const { email, code, deviceIdentifier } = req.body;
 
   try {
     // Find the user by email
@@ -98,8 +126,9 @@ userController.authenticate = async (req, res) => {
       const sessionToken = generateSessionToken();
       const session = new Session({
         userId: user._id,
+        deviceIdentifier: deviceIdentifier,
         token: sessionToken,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Set session to expire in 24 hours
+        expiresAt: new Date(Date.now() + 168 * 60 * 60 * 1000) // Set session to expire in 7 days
       });
       await session.save();
 
@@ -109,7 +138,7 @@ userController.authenticate = async (req, res) => {
       });
     } else {
       // If the code does not match or is expired, return an error
-      return res.status(401).json({ message: 'Invalid email or code' });
+      return res.status(402).json({ message: 'Invalid email or code' });
     }
   } catch (error) {
     console.error(error);
@@ -124,10 +153,21 @@ userController.signUp = async (req, res, next) => {
 
   console.log("APP userController.signUp; this is req.body: ", req.body);
 
+  // Check if any necessary information is missing
+  if (!email || !phone || !password || !firstName || !lastName || !deviceIdentifier) {
+    return res.status(402).json({ message: 'Missing necessary information' });
+  }
+
   // Remove dashes from phone number
   phone = phone.replace(/-/g, "");
 
-  res.locals.phone = phone
+  // Validate the phone number (assuming a U.S. phone number format)
+  const phoneRegex = /^[2-9]{1}[0-9]{2}[0-9]{3}[0-9]{4}$/;
+  if (!phoneRegex.test(phone)) {
+    return res.status(405).json({ message: 'Invalid phone number format' });
+  }
+
+  res.locals.phone = phone;
 
   try {
     // Check if the user already exists
@@ -144,12 +184,11 @@ userController.signUp = async (req, res, next) => {
       password, // Password will be hashed due to pre-save hook in the model
       name,
       deviceIdentifier,
-      diarization,
       notifications: { // Add default notification settings
         email: true,
         sms: true,
         app: true
-      } // Save the device identifier
+      }
     });
 
     // Save the user to the database
@@ -160,18 +199,18 @@ userController.signUp = async (req, res, next) => {
 
   } catch (error) {
     // Handle any errors that occur during the process
-
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
   }
 };
 
 userController.createTranscription = async (req, res, next) => {
-  console.log("APP; in userController.createTranscription (2/7); this is req.body: ", req.body);
+  console.log("APP; in userController.createTranscription (2/7);");
   
   const { email, subject, length } = req.body;
 
   res.locals.phone = req.body.phone
+  res.locals.subject = req.body.subject
   
   try {
     const user = await User.findOne({ email });
@@ -184,12 +223,13 @@ userController.createTranscription = async (req, res, next) => {
     res.locals.smsNotification = user.notifications?.sms ?? true; // Default to false if undefined
     res.locals.emailNotification = user.notifications?.email ?? true; // Default to false if undefined
     res.locals.appNotification = user.notifications?.app ?? true;
-    res.locals.diarization = user?.diarization ?? false;// Default to false if undefined
-  
+    res.locals.diarization = user?.diarization ?? false; // Default to false if undefined
+    
+    console.log("APP; in userController.createTranscription (2/7); this is res.locals.diarization: ", res.locals.diarization )
     const newTranscription = {
       email: email,
-      subject: subject || "test-run",
-      length: Math.floor(length) || 69,
+      subject: subject || "n/a",
+      length: Math.floor(length) || "n/a",
       timestamp: new Date(),
       completed: false
     };
@@ -197,7 +237,7 @@ userController.createTranscription = async (req, res, next) => {
     user.transcriptions.push(newTranscription);
     await user.save();
   
-    console.log(`New transcription added for user: ${email}`);
+    console.log(`New transcription added for user(2/7): ${email}`);
     next();
   } catch (error) {
     console.error('Error creating transcription:', error);
@@ -422,7 +462,7 @@ userController.updateNotifications = async (req, res) => {
 
   try {
     // Extract the phone number and potential notification settings from the request body
-    const { phone, emailNotification, smsNotification, appNotification } = req.body;
+    const { phone, emailNotification, smsNotification, appNotification, diarization } = req.body;
 
     // Find the user by phone number
     const user = await User.findOne({ phone });
@@ -441,18 +481,179 @@ userController.updateNotifications = async (req, res) => {
     if (typeof appNotification === 'boolean') {
       user.notifications.app = appNotification;
     }
-    if (typeof diarizationNotification === 'boolean') {
+    if (typeof diarization === 'boolean') {
       user.diarization = diarization;
     }
 
     // Save the updated user
     await user.save();
-
+    console.log()
     return res.status(200).json({ message: 'Notification settings updated successfully' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+userController.updateInfo = async (req, res) => {
+
+  console.log("APP; in userController.updateInfo; this is req.body: ", req.body)
+
+  const { email, phone, newEmail, newPhone } = req.body;
+
+  // Ensure the current email and phone are provided
+  if (!email || !phone) {
+    return res.status(400).json({ message: 'Current email and phone are required' });
+  }
+
+  try {
+    // Find the user by current email and phone
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update the user's email if a new one is provided
+    if (newEmail) {
+      
+      // Check if the new email already exists in the database
+      const existingEmailUser = await User.findOne({ email: newEmail });
+      if (existingEmailUser) {
+        console.log("New email is already in use")
+        return res.status(409).json({ message: 'New email is already in use' });
+      }
+      user.email = newEmail;
+    }
+
+    // Update the user's phone if a new one is provided
+    if (newPhone) {
+      // Check if the new phone already exists in the database
+      const existingPhoneUser = await User.findOne({ phone: newPhone });
+      if (existingPhoneUser) {
+        console.log("New phone is already in use")
+        return res.status(409).json({ message: 'New phone number is already in use' });
+      }
+      user.phone = newPhone;
+    }
+
+    // Save the updated user information
+    await user.save();
+    console.log("User successfully updated!")
+
+    return res.status(202).json({
+      message: 'Successfully updated user',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      deviceIdentifier: user.deviceIdentifier, // Include the device identifier
+      notifications: {
+        sms: user.notifications?.sms || false, // Default to false if undefined
+        email: user.notifications?.email || false, // Default to false if undefined
+        app: user.notifications?.app || false // Default to false if undefined
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user info:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+userController.deleteAccount = async (req, res) => {
+  console.log("APP; userController.deleteAccount; this is req.body: ", req.body)
+  const { phone } = req.body;  // Extract phone number from request body
+
+  if (!phone) {
+      return res.status(400).json({ error: "Phone number is required" });
+  }
+
+  try {
+      // Find and delete the user by phone number
+      const deletedUser = await User.findOneAndDelete({ phone });
+
+      if (!deletedUser) {
+          return res.status(404).json({ error: "User not found" });
+      }
+
+      // If deletion is successful
+      console.log(`Account: ${phone} successfully deleted`);
+      return res.status(202).json({ message: "Account successfully deleted" });
+  } catch (error) {
+      // Handle any errors during the deletion process
+      console.log("Error deleting account:", error);
+      return res.status(500).json({ error: "Server error. Could not delete account." });
+  }
+};
+
+userController.checkSession = async (req, res) => {
+  console.log('APP; in userController.checkSession; this is req.body: ', req.body);
+
+  try {
+    const { deviceIdentifier } = req.body;
+
+    // Find the user by the deviceIdentifier in the User collection
+    const user = await User.findOne({ deviceIdentifier });
+
+    if (!user) {
+      console.log('User not found');
+      return res.status(402).json({ message: 'User not found' });
+    }
+
+    // Check if a session exists for the user (by their userId)
+    const existingSession = await Session.findOne({ userId: user._id });
+
+    if (!existingSession) {
+      console.log('Session not found');
+      return res.status(402).json({ message: 'Session not found' });
+    }
+
+    // Return the user info as requested
+    console.log("User found: ", user.name)
+    return res.status(202).json({
+      message: 'Successfully signed in without 2FA',
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      sessionToken: existingSession.token, // Include the session token in the response
+      deviceIdentifier: existingSession.deviceIdentifier, // Include the device identifier
+      notifications: {
+        sms: user.notifications?.sms || false, // Default to false if undefined
+        email: user.notifications?.email || false, // Default to false if undefined
+        app: user.notifications?.app || false // Default to false if undefined
+      }
+    });
+  } catch (err) {
+    console.error('Error checking session:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+userController.signOut = async (req, res) => {
+  console.log("APP; in userController.signOut; this is req.body: ", req.body)
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find and delete the session associated with the user's userId
+    const deletedSession = await Session.findOneAndDelete({ userId: user._id });
+
+    if (!deletedSession) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    return res.status(202).json({ message: 'Successfully signed out' });
+  } catch (err) {
+    console.error('Error signing out:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 module.exports = userController;
