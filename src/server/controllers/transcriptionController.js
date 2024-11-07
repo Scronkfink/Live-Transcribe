@@ -174,36 +174,44 @@ const transcribeAudio = (req, res, key, audioPath) => {
       return reject('Audio file does not exist.');
     }
 
-    console.log(`TRANSCRIPTION IN PROCESS CAPT'N`);
+    console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-    const outputDir = path.join(__dirname, '..', 'outputs');
-    const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
-    const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
+const outputDir = path.join(__dirname, '..', process.platform === 'win32' ? 'outputs' : 'output');
+const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
+const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
 
-    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
-    
-    exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        console.error(`stderr: ${stderr}`);
-        return;
-      }
+// Use platform-specific script paths and shell executables
+const scriptPath = process.platform === 'win32'
+    ? 'C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh'
+    : '/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh';
+const shell = process.platform === 'win32'
+    ? 'C:/Program Files/Git/bin/bash.exe'
+    : '/bin/bash';
 
-      res.locals.diarization = false
+const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
 
-      if (!res.locals.diarization) {
-        console.log("Skipping JSON processing as diarization is false");
+console.log('Executing shell command:', command);
 
-        // Check if the output text file exists
-        if (!fs.existsSync(txtOutputPath)) {
-          console.error(`Text file does not exist at: ${txtOutputPath}`);
-          return reject('Text file does not exist.');
-        }
+exec(command, { shell: shell }, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`Error: ${error.message}`);
+    console.error(`stderr: ${stderr}`);
+    return reject('Error during transcription.');
+  }
 
-        // Save the path to res.locals[key]
-        res.locals[key] = txtOutputPath;
-        return resolve();
-      }
+  res.locals.diarization = false;  // Adjust as needed based on your program logic
+
+  if (!res.locals.diarization) {
+    console.log("Skipping JSON processing as diarization is false");
+
+    if (!fs.existsSync(txtOutputPath)) {
+      console.error(`Text file does not exist at: ${txtOutputPath}`);
+      return reject('Text file does not exist.');
+    }
+
+    res.locals[key] = txtOutputPath;
+    return resolve();
+  }
 
       console.log("Proceeding to JSON to TXT conversion");
 
@@ -311,19 +319,27 @@ transcriptionController.transcribe = async (req, res, next) => {
 
   res.locals.email = email;
 
-  const outputDir = path.resolve('./src/server/outputs'); // Define your output directory here
+  const outputDir = path.resolve(process.platform === 'win32' ? './src/server/outputs' : './src/server/output');
   const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
   const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
-
-  const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh '${audioPath}' '${outputDir}'"`;
-
+  
+  // Determine the script path and shell based on the platform
+  const scriptPath = process.platform === 'win32'
+      ? 'C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/run_transcription2.sh'
+      : '/Users/hanson/Desktop/Live-Transcribe/src/server/run_transcription.sh';
+  const shell = process.platform === 'win32'
+      ? 'C:/Program Files/Git/bin/bash.exe'
+      : '/bin/bash';
+  
+  const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
+  
   console.log('Executing shell command:', command);
   
-  exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
+  exec(command, { shell: shell }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Error: ${error.message}`);
       console.error(`stderr: ${stderr}`);
-      return;
+      return reject('Error during transcription.');
     }
     res.locals.diarization = false
 
