@@ -165,7 +165,6 @@ twilioController.addParticipant = async (req, res) => {
     twiml.say('Proceeding to record your conversation.');
     twiml.redirect('/api/startRecording');
   }
-
   res.type('text/xml');
   res.send(twiml.toString());
 };
@@ -243,20 +242,28 @@ twilioController.joinConferenceCall = async (req, res) => {
  */
 twilioController.startRecording = (req, res) => {
   console.log("In twilioController.startRecording(3/7); ");
-  const callSid = req.body.CallSid;
-  const conferenceName = `Conference-${callSid}`;
   const twiml = new VoiceResponse();
-  twiml.say('Recording has started. You may now begin your conversation.');
-  twiml.dial().conference({
-    record: 'record-from-start',
-    recordingTrack: 'individual',
-    startConferenceOnEnter: true,
-    endConferenceOnExit: false
-  }, conferenceName);
-  
+
+  // Play a beep sound to signal the start of recording
+  twiml.play(`${process.env.SERVER_ADDRESS}/api/beep`);
+
+  // Begin recording, allowing any key to end the recording
+  twiml.record({
+    action: '/api/twilioTranscription',
+    method: 'POST',
+    maxLength: process.env.TWILIO_MAX_LENGTH || 600, // defaults to 10 minutes if env variable is missing
+    playBeep: true,
+    finishOnKey: '0123456789#*'  // Allows any key to finish recording
+  });
+
+  // After recording, play an ending message and hang up
+  twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
+  twiml.hangup();
+
   res.type('text/xml');
   res.send(twiml.toString());
 };
+
 
 /**
  * handleTranscription

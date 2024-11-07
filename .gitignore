@@ -1,5 +1,6 @@
 node_modules
 src/server/uploads/
+src/server/output/
 src/server/outputs/
 /output
 .env
