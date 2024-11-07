@@ -14,7 +14,13 @@ summarizationController.summarize = async (req, res, next) => {
     const transcriptionText = fs.readFileSync(filePath, 'utf8');
     const prompt = `${promptPrefix} ${transcriptionText}`;
 
-    const ollamaProcess = spawn('C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe', ['run', 'llama3']);
+    const ollamaProcess = spawn(
+      process.platform === 'win32'
+          ? 'C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe'  // Windows-specific path
+          : '/usr/local/bin/ollama',  // Mac/Unix path, update this to the correct path if different
+      ['run', 'llama3']
+  );
+  
 
     let output = '';
     let errorOutput = '';

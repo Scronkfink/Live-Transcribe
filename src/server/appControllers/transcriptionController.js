@@ -121,69 +121,88 @@ const transcribeAudio = (req, res, key, audioPath) => {
       return reject('Audio file does not exist.');
     }
 
-    console.log(`TRANSCRIPTION IN PROCESS CAPT'N`);
+    console.log(`TRANSCRIPTION IN PROCESS CAPT'N: ${audioPath}`);
 
-    // Determine which shell script to use based on res.locals.diarization
-    const scriptName = res.locals.diarization ? 'run_transcription.sh' : 'run_transcription2.sh';
-    const outputDir = path.join(__dirname, '..', 'outputs');
+    const outputDir = path.join(__dirname, '..', 'output');
     const jsonFilePath = path.join(outputDir, `${path.parse(audioPath).name}.json`);
     const txtOutputPath = path.join(outputDir, `${path.parse(audioPath).name}.txt`);
-
-    const command = `bash -c "C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/${scriptName} '${audioPath}' '${outputDir}'"`;
-
-    exec(command, { shell: 'C:/Program Files/Git/bin/bash.exe' }, (error, stdout, stderr) => {
+    
+    // Determine the shell script and command based on the platform
+    const scriptName = diarization ? 'run_transcription.sh' : 'run_transcription2.sh';
+    const scriptPath = process.platform === 'win32'
+        ? `C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/${scriptName}`
+        : `/Users/hanson/Desktop/Live-Transcribe/src/server/${scriptName}`;
+    const shell = process.platform === 'win32'
+        ? 'C:/Program Files/Git/bin/bash.exe'  // Windows shell path
+        : '/bin/bash';  // Mac/Unix shell path
+    
+    const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
+    
+    console.log('Executing shell command:', command);
+    
+    exec(command, { shell: shell }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
-        return reject('Error executing transcription command.');
+        return reject('Error during transcription.');
       }
-
-      // If using run_transcription2.sh, skip JSON processing
-      if (!res.locals.diarization) {
-        console.log("Skipping JSON processing as diarization is false");
-
-        // Check if the output text file exists
-        if (!fs.existsSync(txtOutputPath)) {
-          console.error(`Text file does not exist at: ${txtOutputPath}`);
-          return reject('Text file does not exist.');
+    
+      if (!diarization) {
+        console.log("Diarization is disabled. Skipping merging and formatting.");
+    
+        fs.writeFile(txtOutputPath, stdout, (err) => {
+          if (err) {
+            console.error('Error writing to text file:', err);
+            return reject('Error saving transcription text.');
+          }
+          res.locals[key] = txtOutputPath;
+          return resolve();
+        });
+      } else {
+        console.log("Proceeding to JSON to TXT conversion");
+    
+        let transcriptionData;
+        try {
+          const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
+          transcriptionData = JSON.parse(jsonData);
+        } catch (err) {
+          console.error('Error reading or parsing JSON file:', err);
+          return reject('Error processing transcription data.');
         }
-
-        // Save the path to res.locals[key]
-        res.locals[key] = txtOutputPath;
-        return resolve();
-      }
-
-      // Process the JSON output and merge speaker segments
-      console.log("Proceeding to JSON to TXT conversion as diarization is true");
-
-      let transcriptionData;
-      try {
-        const jsonData = fs.readFileSync(jsonFilePath, 'utf8');
-        transcriptionData = JSON.parse(jsonData);
-      } catch (err) {
-        console.error('Error reading or parsing JSON file:', err);
-        return reject('Error processing transcription data.');
-      }
-
-      const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${minutes}:${remainingSeconds}`;
-      };
-      
-      const mergeSegmentsBySpeaker = (segments) => {
-        const mergedSegments = [];
-        let currentSpeaker = null;
-        let currentStartTime = null;
-        let currentEndTime = null;
-        let currentText = '';
-      
-        segments.forEach((segment, index) => {
-          if (segment.speaker === currentSpeaker) {
-            currentEndTime = segment.end;
-            currentText += ` ${segment.text.trim()}`;
-          } else {
-            if (currentSpeaker !== null) {
+    
+        const formatTime = (seconds) => {
+          const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+          return `${minutes}:${remainingSeconds}`;
+        };
+    
+        const mergeSegmentsBySpeaker = (segments) => {
+          const mergedSegments = [];
+          let currentSpeaker = null;
+          let currentStartTime = null;
+          let currentEndTime = null;
+          let currentText = '';
+    
+          segments.forEach((segment, index) => {
+            if (segment.speaker === currentSpeaker) {
+              currentEndTime = segment.end;
+              currentText += ` ${segment.text.trim()}`;
+            } else {
+              if (currentSpeaker !== null) {
+                mergedSegments.push({
+                  speaker: currentSpeaker,
+                  startTime: currentStartTime,
+                  endTime: currentEndTime,
+                  text: currentText.trim()
+                });
+              }
+              currentSpeaker = segment.speaker;
+              currentStartTime = segment.start;
+              currentEndTime = segment.end;
+              currentText = segment.text.trim();
+            }
+    
+            if (index === segments.length - 1) {
               mergedSegments.push({
                 speaker: currentSpeaker,
                 startTime: currentStartTime,
@@ -191,43 +210,29 @@ const transcribeAudio = (req, res, key, audioPath) => {
                 text: currentText.trim()
               });
             }
-            currentSpeaker = segment.speaker;
-            currentStartTime = segment.start;
-            currentEndTime = segment.end;
-            currentText = segment.text.trim();
+          });
+    
+          return mergedSegments;
+        };
+    
+        const mergedSegments = mergeSegmentsBySpeaker(transcriptionData.segments);
+    
+        const formattedText = mergedSegments.map(segment => {
+          const startTime = formatTime(segment.startTime);
+          const endTime = formatTime(segment.endTime);
+          const text = segment.text;
+          return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
+        }).join('\n\n');
+    
+        fs.writeFile(txtOutputPath, formattedText, (err) => {
+          if (err) {
+            console.error('Error writing to text file:', err);
+            return reject('Error saving transcription text.');
           }
-
-          if (index === segments.length - 1) {
-            mergedSegments.push({
-              speaker: currentSpeaker,
-              startTime: currentStartTime,
-              endTime: currentEndTime,
-              text: currentText.trim()
-            });
-          }
+          res.locals[key] = txtOutputPath;
+          resolve();
         });
-      
-        return mergedSegments;
-      };
-      
-      const mergedSegments = mergeSegmentsBySpeaker(transcriptionData.segments);
-      
-      const formattedText = mergedSegments.map(segment => {
-        const startTime = formatTime(segment.startTime);
-        const endTime = formatTime(segment.endTime);
-        const text = segment.text;
-      
-        return `${segment.speaker} (${startTime}-${endTime}) - "${text}"`;
-      }).join('\n\n');
-
-      fs.writeFile(txtOutputPath, formattedText, (err) => {
-        if (err) {
-          console.error('Error writing to text file:', err);
-          return reject('Error saving transcription text.');
-        }
-        res.locals[key] = txtOutputPath;
-        resolve();
-      });
+      }
     });
   });
 };
