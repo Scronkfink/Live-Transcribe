@@ -134,16 +134,17 @@ const transcribeAudio = (req, res, key, audioPath) => {
     const scriptPath = process.platform === 'win32'
         ? `C:/Users/Leonidas/Desktop/Live-Transcribe-main/src/server/${scriptName}`
         : `/Users/hanson/Desktop/Live-Transcribe/src/server/${scriptName}`;
-    const shell = process.platform === 'win32'
-        ? 'C:/Program Files/Git/bin/bash.exe'  // Windows shell path
-        : '/bin/bash';  // Mac/Unix shell path
     
+    // Wrap the Windows shell path in double quotes
+    const shell = process.platform === 'win32'
+        ? `"C:/Program Files/Git/bin/bash.exe"`
+        : '/bin/bash';
     
     const command = `${shell} -c "${scriptPath} '${audioPath}' '${outputDir}'"`;
-    
+
     console.log('Executing shell command:', command);
     
-    exec(command, { shell: shell }, (error, stdout, stderr) => {
+    exec(command, { shell: process.platform === 'win32' ? true : '/bin/bash' }, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         console.error(`stderr: ${stderr}`);
