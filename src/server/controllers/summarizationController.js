@@ -7,11 +7,10 @@ const summarizationController = {};
 summarizationController.summarize = async (req, res, next) => {
   console.log("APP; in summarizationController.summarize (6/7);");
 
-  const transcriptionFiles = res.locals.transcriptionPaths; // Array of transcription file paths
+  const transcriptionFiles = res.locals.transcriptionPaths;
   const promptPrefix = "Create a short summary of the following transcription and do not include ANYTHING other than the summary: ";
-  res.locals.summary = []; // Initialize summary array to store each file's summary
+  res.locals.summary = []; 
 
-  // Function to summarize each file
   const summarizeFile = (filePath) => {
     return new Promise((resolve, reject) => {
       const transcriptionText = fs.readFileSync(filePath, 'utf8');
@@ -19,8 +18,8 @@ summarizationController.summarize = async (req, res, next) => {
 
       const ollamaProcess = spawn(
         process.platform === 'win32'
-          ? 'C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe'  // Windows path
-          : '/usr/local/bin/ollama',  // Mac/Unix path
+          ? 'C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe'
+          : '/usr/local/bin/ollama',
         ['run', 'llama3']
       );
 
@@ -45,8 +44,8 @@ summarizationController.summarize = async (req, res, next) => {
         console.log(`Generated summary: ${output}`);
 
         try {
-          // Convert each summary to PDF and add it to the summary array
-          const pdfBuffer = await convertStrToPDF(output);
+          // Pass 'res' to convertStrToPDF
+          const pdfBuffer = await convertStrToPDF(output, res);
           res.locals.summary.push({ text: output, pdf: pdfBuffer });
           resolve();
         } catch (error) {
@@ -60,7 +59,6 @@ summarizationController.summarize = async (req, res, next) => {
     });
   };
 
-  // Summarize each file and wait for all to complete
   try {
     await Promise.all(transcriptionFiles.map(summarizeFile));
     console.log('All summaries generated and converted to PDF');

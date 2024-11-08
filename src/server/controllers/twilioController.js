@@ -102,7 +102,7 @@ twilioController.handleSubject = async (req, res) => {
   console.log("In twilioController.handleSubject (2/7); ");
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';
-
+  res.locals.participantCount = 1
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
 
@@ -121,10 +121,10 @@ twilioController.handleSubject = async (req, res) => {
       const twiml = new VoiceResponse();
       twiml.play(`${process.env.SERVER_ADDRESS}/api/recording`);
       twiml.gather({
-        action: '/api/addParticipant',
+        action: `/api/addParticipant?participantCount=${res.locals.participantCount}`,
         method: 'POST',
         numDigits: 1,
-        timeout: 5 // Timeout in seconds for gathering the input
+        timeout: 5
       });
 
       res.type('text/xml');
@@ -150,21 +150,21 @@ twilioController.handleSubject = async (req, res) => {
  */
 twilioController.addParticipant = async (req, res) => {
   const digit = req.body.Digits;
+  const participantCount = parseInt(req.query.participantCount, 10) || 1;
   const twiml = new VoiceResponse();
 
   if (digit === '1') {
-    // Prompt to enter phone number
+    // Prompt for new participant phone number, pass participantCount to joinConference
     twiml.say('Please enter the phone number of the person to add, followed by the pound sign.');
     twiml.gather({
-      action: '/api/joinConference',
+      action: `/api/joinConference?participantCount=${participantCount + 1}`,
       method: 'POST',
-      numDigits: 11, // Assuming US numbers with country code, e.g., +12345678901
+      numDigits: 11,
       timeout: 10
     });
   } else {
-    // Proceed to start recording
-    twiml.say('Proceeding to record your conversation.');
-    twiml.redirect('/api/startRecording');
+    // Redirect to startRecording with participantCount included
+    twiml.redirect(`/api/startRecording?participantCount=${participantCount}`);
   }
   res.type('text/xml');
   res.send(twiml.toString());
@@ -181,16 +181,15 @@ twilioController.addParticipant = async (req, res) => {
  */
 twilioController.joinConference = async (req, res) => {
   const phoneNumber = req.body.Digits;
-  const callSid = req.body.CallSid;
-  const conferenceName = `Conference-${callSid}`;
-  res.locals.participantCount += 1; // Increment participant count
+  const participantCount = parseInt(req.query.participantCount, 10) || 1;
+  const conferenceName = `Conference-${req.body.CallSid}`;
 
   const twiml = new VoiceResponse();
   twiml.say(`You have been added to a conference call hosted by ${res.locals.username}. The meeting should begin shortly.`);
   twiml.play({ loop: 10 }, 'http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3');
 
   client.calls.create({
-    url: `${process.env.SERVER_ADDRESS}/api/joinConferenceCall?conferenceName=${conferenceName}`,
+    url: `${process.env.SERVER_ADDRESS}/api/joinConferenceCall?conferenceName=${conferenceName}&participantCount=${participantCount}`,
     to: phoneNumber,
     from: process.env.TWILIO_PHONE_NUMBER
   }).then(call => {
@@ -214,8 +213,9 @@ twilioController.joinConference = async (req, res) => {
  */
 twilioController.joinConferenceCall = async (req, res) => {
   const conferenceName = req.query.conferenceName;
-
   const twiml = new VoiceResponse();
+
+  // Join the conference
   twiml.dial().conference({
     record: 'record-from-start',
     recordingTrack: 'individual',
@@ -236,6 +236,7 @@ twilioController.joinConferenceCall = async (req, res) => {
  * Next Controller: handleTranscription
  */
 twilioController.startRecording = (req, res) => {
+  const participantCount = parseInt(req.query.participantCount, 10) || 1;
   const twiml = new VoiceResponse();
   
   // Play a beep sound to signal the start of recording
@@ -243,12 +244,13 @@ twilioController.startRecording = (req, res) => {
   
   // Begin recording, allowing any key to end the recording
   twiml.record({
-    action: '/api/twilioTranscription',
+    action: `/api/twilioTranscription?participantCount=${participantCount}`,
     method: 'POST',
     maxLength: process.env.TWILIO_MAX_LENGTH || 600,
     playBeep: true,
     finishOnKey: '0123456789#*'
   });
+
   
   twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
   twiml.hangup();
@@ -271,44 +273,30 @@ twilioController.handleTranscription = async (req, res, next) => {
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   res.locals.number = callerPhoneNumber;
 
-  console.log("in twilioController.handleTranscription(4/7);", recordingUrl);
-
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
 
     if (user) {
-      // Retrieve the latest transcription entry for the user
       const transcription = user.transcriptions[user.transcriptions.length - 1];
-
-      // Initialize audioUrls array if it doesn't exist
       transcription.audioUrls = transcription.audioUrls || [];
-
-      // Add the current recording URL to the audioUrls array
       transcription.audioUrls.push(recordingUrl);
 
-      // Check if all expected recordings have been received
-      const expectedRecordings = res.locals.participantCount;
+      const expectedRecordings = parseInt(req.query.participantCount, 10) || 1;
       const receivedRecordings = transcription.audioUrls.length;
 
       if (receivedRecordings === expectedRecordings) {
-        console.log("All recordings received, moving to the next middleware");
-
-        res.locals.receivedRecordings = receivedRecordings
+        res.locals.receivedRecordings = receivedRecordings;
         await user.save();
-
         next();
       } else {
-        // Save the partial progress if not all recordings have been received yet
         await user.save();
         console.log(`Waiting for more recordings: ${receivedRecordings}/${expectedRecordings} received.`);
-        res.sendStatus(200); // Respond to Twilio without proceeding yet
+        res.sendStatus(200);
       }
     } else {
-      console.error('User not found');
       res.status(404).send('User not found');
     }
   } catch (error) {
-    console.error('Error handling transcription:', error);
     res.status(500).send('Error handling transcription');
   }
 };

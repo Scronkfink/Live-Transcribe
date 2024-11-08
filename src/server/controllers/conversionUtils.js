@@ -4,7 +4,6 @@ const { Document, Packer, Paragraph, TextRun } = require('docx');
 const path = require('path');
 
 const sanitizeText = (text) => {
-  // Remove any non-printable characters or control characters
   return text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 };
 
@@ -61,22 +60,22 @@ const convertTxtToWord = (txtFilePath, wordFilePath) => {
   });
 };
 
+// Updated to accept 'res' as a parameter
 const convertStrToPDF = async (string, res) => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument();
       const sanitizedString = sanitizeText(string);
 
-      // Pipe the document to a buffer
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => {
         const pdfBuffer = Buffer.concat(buffers);
-        res.locals.summary = pdfBuffer;
-        resolve();
+        res.locals.summary = res.locals.summary || [];
+        res.locals.summary.push(pdfBuffer);
+        resolve(pdfBuffer); // Resolve with the generated buffer
       });
 
-      // Add text to the document
       doc.text(sanitizedString, {
         x: 50,
         y: 50,
@@ -84,14 +83,11 @@ const convertStrToPDF = async (string, res) => {
         align: 'left'
       });
 
-      // Finalize the PDF and end the document
       doc.end();
     } catch (error) {
       reject(error);
     }
   });
 };
-
-
 
 module.exports = { convertTxtToPdf, convertTxtToWord, convertStrToPDF };

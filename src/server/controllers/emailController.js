@@ -50,17 +50,13 @@ const transporter = nodemailer.createTransport({
 });
 
 async function updateLatestTranscription(res) {
-  const summaryBuffer = res.locals.summary; // Access the PDF buffer from res.locals
+  const summaryBuffer = res.locals.summary; 
 
   try {
-    // Read the subject transcription text from the file
     const subjectTranscriptionPath = res.locals.subjectTranscription;
     let subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
-
-    // Use a regular expression to remove everything up to and including the first " - "
     subjectTranscriptionText = subjectTranscriptionText.replace(/^.*? - /, '');
 
-    // Find the user by their ID (assuming you have a User model)
     const phoneNumber = res.locals.number;
     const user = await User.findOne({ phone: phoneNumber });
 
@@ -69,15 +65,11 @@ async function updateLatestTranscription(res) {
       return;
     }
 
-    // Access the latest transcription in the array
     const latestTranscription = user.transcriptions[user.transcriptions.length - 1];
-
-    // Update the subject, set the completed property to true, and add the summary PDF buffer
     latestTranscription.subject = subjectTranscriptionText;
     latestTranscription.completed = true;
-    latestTranscription.summary = summaryBuffer; // Save the summary buffer to the transcription
+    latestTranscription.summary = summaryBuffer;
 
-    // Save the updated user document
     await user.save();
 
     console.log('Successfully updated the latest transcription with the new subject, marked it as completed, and saved the summary PDF.');
@@ -87,35 +79,28 @@ async function updateLatestTranscription(res) {
 };
 
 emailController.sendTranscript = async (req, res, next) => {
-
   console.log("In emailController.sendTranscript(7/7)");
 
   const email = res.locals.email;
   const user = res.locals.user;
-  const summaryBuffers = res.locals.summary; // Array of summaries with text and PDF
-  const transcriptionPdfPaths = res.locals.transcriptionPdfPath; // Array of PDF paths
-  const transcriptionWordPaths = res.locals.transcriptionWordPath; // Array of Word paths
+  const summaryBuffers = res.locals.summary || []; 
+  const transcriptionPdfPaths = res.locals.transcriptionPdfPaths || []; 
+  const transcriptionWordPaths = res.locals.transcriptionWordPaths || []; 
   const subjectTranscriptionPath = res.locals.subjectTranscription;
 
   cleanupExpiredFiles();
   updateLatestTranscription(res);
 
   try {
-    // Extract the text from the "subject" transcription
     let subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
     subjectTranscriptionText = subjectTranscriptionText.replace(/^.*? - /, '');
 
-    // Read the HTML template and replace placeholders
     let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');
     htmlContent = htmlContent.replace('{{userName}}', user);
 
-    // Prepare sanitized subject for email
     const sanitizedSubject = subjectTranscriptionText.trim();
-
-    // Generate attachments array
     const attachments = [];
 
-    // Add transcription PDFs
     transcriptionPdfPaths.forEach((pdfPath, index) => {
       attachments.push({
         filename: `${sanitizedSubject}_transcription_${index + 1}.pdf`,
@@ -124,7 +109,6 @@ emailController.sendTranscript = async (req, res, next) => {
       });
     });
 
-    // Add transcription Word documents
     transcriptionWordPaths.forEach((wordPath, index) => {
       attachments.push({
         filename: `${sanitizedSubject}_transcription_${index + 1}.docx`,
@@ -133,20 +117,18 @@ emailController.sendTranscript = async (req, res, next) => {
       });
     });
 
-    // Add summaries as PDFs
     summaryBuffers.forEach((summary, index) => {
       attachments.push({
         filename: `summary_${index + 1}.pdf`,
-        content: summary.pdf, // PDF buffer
+        content: summary.pdf,
         contentType: 'application/pdf'
       });
     });
 
-    // Define mail options
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
-      subject: sanitizedSubject, // Use the sanitized subject transcription as the email subject
+      subject: sanitizedSubject,
       html: htmlContent,
       attachments
     };
