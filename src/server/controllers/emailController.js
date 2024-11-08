@@ -84,7 +84,7 @@ async function updateLatestTranscription(res) {
   } catch (error) {
     console.error('Error updating the latest transcription:', error);
   }
-}
+};
 
 emailController.sendTranscript = async (req, res, next) => {
 
@@ -92,56 +92,67 @@ emailController.sendTranscript = async (req, res, next) => {
 
   const email = res.locals.email;
   const user = res.locals.user;
-  const summaryBuffer = res.locals.summary;
+  const summaryBuffers = res.locals.summary; // Array of summaries with text and PDF
+  const transcriptionPdfPaths = res.locals.transcriptionPdfPath; // Array of PDF paths
+  const transcriptionWordPaths = res.locals.transcriptionWordPath; // Array of Word paths
+  const subjectTranscriptionPath = res.locals.subjectTranscription;
 
   cleanupExpiredFiles();
   updateLatestTranscription(res);
 
   try {
     // Extract the text from the "subject" transcription
-    const subjectTranscriptionPath = res.locals.subjectTranscription;
     let subjectTranscriptionText = fs.readFileSync(subjectTranscriptionPath, 'utf8');
-
-    // Use a regular expression to remove everything up to and including the first " - "
     subjectTranscriptionText = subjectTranscriptionText.replace(/^.*? - /, '');
 
     // Read the HTML template and replace placeholders
     let htmlContent = fs.readFileSync(path.join(__dirname, '../../email.html'), 'utf8');
     htmlContent = htmlContent.replace('{{userName}}', user);
 
-    // Get the paths for PDF and Word documents
-    const transcriptionPdfPath = res.locals.transcriptionPdfPath;
-    const transcriptionWordPath = res.locals.transcriptionWordPath;
-
-    // Create mail options
+    // Prepare sanitized subject for email
     const sanitizedSubject = subjectTranscriptionText.trim();
 
+    // Generate attachments array
+    const attachments = [];
+
+    // Add transcription PDFs
+    transcriptionPdfPaths.forEach((pdfPath, index) => {
+      attachments.push({
+        filename: `${sanitizedSubject}_transcription_${index + 1}.pdf`,
+        path: pdfPath,
+        contentType: 'application/pdf'
+      });
+    });
+
+    // Add transcription Word documents
+    transcriptionWordPaths.forEach((wordPath, index) => {
+      attachments.push({
+        filename: `${sanitizedSubject}_transcription_${index + 1}.docx`,
+        path: wordPath,
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+    });
+
+    // Add summaries as PDFs
+    summaryBuffers.forEach((summary, index) => {
+      attachments.push({
+        filename: `summary_${index + 1}.pdf`,
+        content: summary.pdf, // PDF buffer
+        contentType: 'application/pdf'
+      });
+    });
+
+    // Define mail options
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
       subject: sanitizedSubject, // Use the sanitized subject transcription as the email subject
       html: htmlContent,
-      attachments: [
-        {
-          filename: `${sanitizedSubject}.pdf`, // Set the filename to the sanitized subject transcription text
-          path: transcriptionPdfPath,
-          contentType: 'application/pdf'
-        },
-        {
-          filename: `${sanitizedSubject}.docx`,
-          path: transcriptionWordPath,
-          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        },
-        {
-          filename: 'summary.pdf', // Set the filename for the summary PDF
-          content: summaryBuffer, // Attach the summary buffer directly
-          contentType: 'application/pdf'
-        }
-      ]
+      attachments
     };
 
     console.log('Sending email...');
-    await transporter.sendMail(mailOptions); 
+    await transporter.sendMail(mailOptions);
     console.log('Email sent successfully!');
   } catch (error) {
     console.error('Error sending email:', error);
@@ -149,7 +160,6 @@ emailController.sendTranscript = async (req, res, next) => {
   }
   return next();
 };
-
 
 emailController.uploadTranscript = async (req, res, next) => {
   const email = res.locals.email;
@@ -190,7 +200,7 @@ emailController.uploadTranscript = async (req, res, next) => {
     return next(error);
   }
   return next();
-}
+};
 
 emailController.test = async (req, res, next) => {
   const email = "jacksonchanson@gmail.com";

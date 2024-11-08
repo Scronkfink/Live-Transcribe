@@ -7,54 +7,66 @@ const summarizationController = {};
 summarizationController.summarize = async (req, res, next) => {
   console.log("APP; in summarizationController.summarize (6/7);");
 
-  const filePath = res.locals.transcription;
+  const transcriptionFiles = res.locals.transcriptionPaths; // Array of transcription file paths
   const promptPrefix = "Create a short summary of the following transcription and do not include ANYTHING other than the summary: ";
+  res.locals.summary = []; // Initialize summary array to store each file's summary
 
+  // Function to summarize each file
+  const summarizeFile = (filePath) => {
+    return new Promise((resolve, reject) => {
+      const transcriptionText = fs.readFileSync(filePath, 'utf8');
+      const prompt = `${promptPrefix} ${transcriptionText}`;
+
+      const ollamaProcess = spawn(
+        process.platform === 'win32'
+          ? 'C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe'  // Windows path
+          : '/usr/local/bin/ollama',  // Mac/Unix path
+        ['run', 'llama3']
+      );
+
+      let output = '';
+      let errorOutput = '';
+
+      ollamaProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      ollamaProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      ollamaProcess.on('close', async (code) => {
+        if (code !== 0) {
+          console.error(`ollama process exited with code ${code}`);
+          console.error(`stderr: ${errorOutput}`);
+          return reject(new Error('Error during summarization'));
+        }
+
+        console.log(`Generated summary: ${output}`);
+
+        try {
+          // Convert each summary to PDF and add it to the summary array
+          const pdfBuffer = await convertStrToPDF(output);
+          res.locals.summary.push({ text: output, pdf: pdfBuffer });
+          resolve();
+        } catch (error) {
+          console.error('Error converting summary to PDF:', error);
+          reject(error);
+        }
+      });
+
+      ollamaProcess.stdin.write(prompt);
+      ollamaProcess.stdin.end();
+    });
+  };
+
+  // Summarize each file and wait for all to complete
   try {
-    const transcriptionText = fs.readFileSync(filePath, 'utf8');
-    const prompt = `${promptPrefix} ${transcriptionText}`;
-
-    const ollamaProcess = spawn(
-      process.platform === 'win32'
-          ? 'C:/Users/Leonidas/AppData/Local/Programs/Ollama/ollama.exe'  // Windows-specific path
-          : '/usr/local/bin/ollama',  // Mac/Unix path, update this to the correct path if different
-      ['run', 'llama3']
-  );
-  
-
-    let output = '';
-    let errorOutput = '';
-
-    ollamaProcess.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-
-    ollamaProcess.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-
-    ollamaProcess.on('close', async (code) => { 
-      if (code !== 0) {
-        console.error(`ollama process exited with code ${code}`);
-        console.error(`stderr: ${errorOutput}`);
-        return res.status(500).json({ error: 'Internal Server Error' });
-      }
-      console.log(`Ahoy! Here be the summary: ${output}`);
-
-      try {
-        await convertStrToPDF(output, res);
-        console.log('Summary successfully converted to PDF and stored in res.locals.summary');
-        next();
-      } catch (error) {
-        console.error('Error converting summary to PDF:', error);
-        res.status(500).json({ message: 'Server error' });
-      }
-    });
-
-    ollamaProcess.stdin.write(prompt);
-    ollamaProcess.stdin.end();
+    await Promise.all(transcriptionFiles.map(summarizeFile));
+    console.log('All summaries generated and converted to PDF');
+    next();
   } catch (error) {
-    console.error('Error reading transcription file:', error);
+    console.error('Error generating summaries:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

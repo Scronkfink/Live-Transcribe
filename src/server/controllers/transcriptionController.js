@@ -24,7 +24,6 @@ const getAudioLengthFromTwilio = async (recordingUrl) => {
 };
 
 transcriptionController.twilioTranscribe = async (req, res, next) => {
-
   console.log("In transcriptionController.twilioTranscribe(5/7)");
 
   const phoneNumber = res.locals.number;
@@ -34,13 +33,12 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
     res.locals.user = user.name;
     res.locals.email = user.email;
 
-    //probably not a good idea to use the transcription identifier as the last recording in the array...but nobody eats 4 marshmallows
     if (user && user.transcriptions.length > 0) {
       const latestTranscription = user.transcriptions[user.transcriptions.length - 1];
-      const audioUrl = latestTranscription.audioUrl;
+      const audioUrls = latestTranscription.audioUrls; // Updated to handle multiple audio URLs
       const subjectUrl = latestTranscription.subjectUrl;
 
-      if (audioUrl && subjectUrl) {
+      if (audioUrls && subjectUrl) {
         const downloadAudio = async (url, filename) => {
           const response = await axios({
             method: 'GET',
@@ -63,7 +61,7 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
           });
         };
 
-        // Download and transcribe the subject audio file first with 5-second delay
+        // Transcribe the subject audio file first
         setTimeout(async () => {
           try {
             const subjectPath = await downloadAudio(subjectUrl, `subject-${user.phone}-${Date.now()}.mp3`);
@@ -74,84 +72,51 @@ transcriptionController.twilioTranscribe = async (req, res, next) => {
             const subjectTxtFilePath = res.locals.subjectTranscription;
             const subjectData = fs.readFileSync(subjectTxtFilePath, 'utf8').trim();
 
-            const audioLength = await getAudioLengthFromTwilio(audioUrl);
-            console.log(`Audio length: ${audioLength} seconds`);
-
             await User.updateOne(
               { phone: phoneNumber },
               { 
                 $set: { 
-                  "transcriptions.$[elem].subject": subjectData.replace(/\r\n/g, '').trim(),
-                  "transcriptions.$[elem].length": audioLength.toString()  // Set the length property to the audioLength
+                  "transcriptions.$[elem].subject": subjectData.replace(/\r\n/g, '').trim()
                 } 
               },
               { arrayFilters: [{ "elem.subject": subjectUrl }] }
             );
-            // Download and transcribe the other audio file
-            const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
-            res.locals.audioPath = audioPath;
-            console.log("Transcribing recording(5/6), CAPT'N!");
-            await transcribeAudio(req, res, 'transcription', audioPath);
 
-            // Convert .txt to PDF and Word
-            const txtFilePath = res.locals.transcription;
-            const transcriptionData = fs.readFileSync(txtFilePath, 'utf8');
+            // Initialize arrays for storing transcription paths for PDF and Word documents
+            res.locals.transcriptionPdfPaths = [];
+            res.locals.transcriptionWordPaths = [];
+            res.locals.transcriptionPaths = [];
 
-            // await User.updateOne(
-            // { phone: phoneNumber },
-            // { $set: { "transcriptions.$[elem].body": transcriptionData } },
-            // { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
-            // );
+            // Process each participant's audio file
+            for (const audioUrl of audioUrls) {
+              const audioPath = await downloadAudio(audioUrl, `recording-${user.phone}-${Date.now()}.mp3`);
+              console.log(`Transcribing individual recording for ${audioUrl}`);
+              
+              // Transcribe each audio file
+              await transcribeAudio(req, res, 'transcription', audioPath);
 
-            // Convert .txt to PDF and Word
-            const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
-            const docxFilePath = txtFilePath.replace('.txt', '.docx');
+              const txtFilePath = res.locals.transcription;
+              res.locals.transcriptionPaths.push(txtFilePath);
 
-            await convertTxtToPdf(txtFilePath, pdfFilePath);
-            await convertTxtToWord(txtFilePath, docxFilePath);
+              // Convert to PDF and Word and store paths
+              const pdfFilePath = txtFilePath.replace('.txt', '.pdf');
+              const docxFilePath = txtFilePath.replace('.txt', '.docx');
 
-            // Read the PDF file as binary data
-            const pdfData = fs.readFileSync(pdfFilePath);
+              await convertTxtToPdf(txtFilePath, pdfFilePath);
+              await convertTxtToWord(txtFilePath, docxFilePath);
 
-            // Calculate the PDF file size in KB
-            const pdfSizeInBytes = fs.statSync(pdfFilePath).size;
-            const pdfSizeInKB = (pdfSizeInBytes / 1024).toFixed(2); // Convert to KB and round to 2 decimal places
-            const pdfSizeFormatted = `${pdfSizeInKB} KB`;
-
-            // Update the user's transcription in the database with the PDF data and pdfSize
-            await User.updateOne(
-              { phone: phoneNumber },
-              { 
-                $set: { 
-                  "transcriptions.$[elem].pdf": pdfData,
-                  "transcriptions.$[elem].pdfSize": pdfSizeFormatted  // Set the pdfSize property
-                } 
-              },
-              { arrayFilters: [{ "elem.audioUrl": audioUrl }] }
-            );
-
-            // Update links for email
-            res.locals.transcriptionPdfPath = pdfFilePath;
-            res.locals.transcriptionWordPath = docxFilePath;
-
-            // Delete the audio files from Twilio
-            const deleteRecording = async (url) => {
-              const recordingSid = url.split('/').pop().split('.')[0];
-              await client.recordings(recordingSid).remove();
-              console.log(`Recording ${recordingSid} deleted successfully.`);
-            };
-
-            await deleteRecording(audioUrl);
-            await deleteRecording(subjectUrl);
+              res.locals.transcriptionPdfPaths.push(pdfFilePath);
+              res.locals.transcriptionWordPaths.push(docxFilePath);
+            }
 
             next();
           } catch (error) {
             console.error('Error downloading or transcribing audio file:', error);
             res.status(500).send('Error downloading or transcribing audio file');
           }
-        }, 5000); // 5-second delay to allow twillio to provide audio file
+        }, 5000);
       } else {
-        res.status(404).send('No audio URL or subject URL found for the latest transcription');
+        res.status(404).send('No audio URLs or subject URL found for the latest transcription');
       }
     } else {
       res.status(404).send('User not found or no transcriptions available');
@@ -268,7 +233,6 @@ const transcribeAudio = (req, res, key, audioPath) => {
     });
   });
 };
-
 
 transcriptionController.transcribe = async (req, res, next) => {
   const audioPath = res.locals.audioPath;
