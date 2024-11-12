@@ -32,13 +32,13 @@ twilioController.handleVoice = async (req, res) => {
     const user = await User.findOne({ phone: callerPhoneNumber }); // Fetch user by phone number
     if (user) {
       const preRecordedVoiceUrl = `${process.env.SERVER_ADDRESS}/api/intro`;
-      res.locals.username = user.name; // Store username for future use
+      res.locals.username = user.name.split(' ')[0];
       res.locals.participantCount = 1; // Pre-recorded intro URL
 
-      const message = `Hello, ${user.name}. I'm here to help you transcribe your call today. What would you like the subject of the conversation to be?`;
+      const message = `Hey ${res.locals.username}, after the beep, please tell me what you want the subject of the conversation to be.`;
 
       // Call ElevenLabs API to generate a personalized message
-      const elevenLabsResponse = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/vr0bgRsxEeKlki1dsI7u', {
+      const elevenLabsResponse = await axios.post('https://api.elevenlabs.io/v1/text-to-speech/t8Np6Kzi4OFDJT2X3tfD', {
         text: message,
         model_id: 'eleven_turbo_v2',
       }, {
@@ -71,7 +71,7 @@ twilioController.handleVoice = async (req, res) => {
       twiml.record({
         action: '/api/subject',
         method: 'POST',
-        maxLength: 5,
+        maxLength: 4,
         playBeep: true
       });
     } else {
@@ -236,6 +236,7 @@ twilioController.joinConferenceCall = async (req, res) => {
  * Next Controller: handleTranscription
  */
 twilioController.startRecording = (req, res) => {
+  console.log("In twilioController.startRecording")
   const participantCount = parseInt(req.query.participantCount, 10) || 1;
   const twiml = new VoiceResponse();
   
@@ -250,14 +251,11 @@ twilioController.startRecording = (req, res) => {
     playBeep: true,
     finishOnKey: '0123456789#*'
   });
-
-  
-  twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
-  twiml.hangup();
   
   res.type('text/xml');
   res.send(twiml.toString());
 };
+
 
 /**
  * handleTranscription
@@ -269,6 +267,12 @@ twilioController.startRecording = (req, res) => {
  * Next Controller: None (call ends)
  */
 twilioController.handleTranscription = async (req, res, next) => {
+  console.log("In twilioController.handleTranscription; this is participant count: ", req.query.participantCount)
+  
+  const twiml = new VoiceResponse();
+  twiml.play(`${process.env.SERVER_ADDRESS}/api/end`);
+  twiml.hangup();
+
   const recordingUrl = req.body.RecordingUrl;
   const callerPhoneNumber = req.body.From.replace(/^\+1/, '');
   res.locals.number = callerPhoneNumber;
