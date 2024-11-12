@@ -4,6 +4,4 @@ src/server/output/
 src/server/outputs/
 /output
 .env
-src/server/voices/
 src/server/appControllers/uploads
-translate-env/
