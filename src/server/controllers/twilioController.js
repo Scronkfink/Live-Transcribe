@@ -27,6 +27,7 @@ twilioController.handleVoice = async (req, res) => {
   const twiml = new VoiceResponse();
   const callerPhoneNumber = req.body.From.replace(/^\+1/, ''); // Normalize phone number
   const conferenceName = `Conference-${req.body.CallSid}`; // Unique conference name based on caller's SID
+  const ownerCallSid = req.body.CallSid; // Capture moderator's CallSid
 
   console.log("In twilioController.handleVoice (1/7); this is the caller's number: ", callerPhoneNumber);
   
@@ -70,7 +71,7 @@ twilioController.handleVoice = async (req, res) => {
 
       // Record the user’s response with the conference name in the query
       twiml.record({
-        action: `/api/subject?conferenceName=${conferenceName}`,
+        action: `/api/subject?conferenceName=${conferenceName}&ownerCallSid=${encodeURIComponent(ownerCallSid)}`,
         method: 'POST',
         maxLength: 4,
         playBeep: true
@@ -96,6 +97,7 @@ twilioController.handleSubject = async (req, res) => {
   const recordingUrl = req.body.RecordingUrl || 'No recording URL provided';
   const conferenceName = req.query.conferenceName; // Retrieve conference name
   res.locals.participantCount = 1;
+  const ownerCallSid = req.query.ownerCallSid;
 
   try {
     const user = await User.findOne({ phone: callerPhoneNumber });
@@ -114,7 +116,7 @@ twilioController.handleSubject = async (req, res) => {
 
       const twiml = new VoiceResponse();
       const gather = twiml.gather({
-        action: `/api/addParticipant?conferenceName=${conferenceName}&participantCount=${res.locals.participantCount}&username=${encodeURIComponent(user.name)}`,
+        action: `/api/addParticipant?conferenceName=${conferenceName}&participantCount=${res.locals.participantCount}&username=${encodeURIComponent(user.name)}&ownerCallSid=${encodeURIComponent(ownerCallSid)}`,
         method: 'POST',
         numDigits: 1,
         timeout: 5
@@ -140,19 +142,20 @@ twilioController.addParticipant = async (req, res) => {
   const participantCount = parseInt(req.query.participantCount, 10) || 1;
   const username = req.query.username;
   const conferenceName = req.query.conferenceName; // Retrieve conference name
+  const ownerCallSid = req.query.ownerCallSid
 
   const twiml = new VoiceResponse();
 
   if (digit === '1') {
     twiml.say('Please enter the phone number of the person to add, followed by the pound sign.');
     twiml.gather({
-      action: `/api/joinConference?conferenceName=${conferenceName}&participantCount=${participantCount + 1}&username=${encodeURIComponent(username)}`,
+      action: `/api/joinConference?conferenceName=${conferenceName}&participantCount=${participantCount + 1}&username=${encodeURIComponent(username)}&ownerCallSid=${encodeURIComponent(ownerCallSid)}`,
       method: 'POST',
       numDigits: 11,
       timeout: 10
     });
   } else {
-    twiml.redirect(`/api/startRecording?conferenceName=${conferenceName}&participantCount=${participantCount}`);
+    twiml.redirect(`/api/startRecording?conferenceName=${conferenceName}&participantCount=${participantCount}&ownerCallSid=${encodeURIComponent(ownerCallSid)}`);
   }
 
   res.type('text/xml');
@@ -163,7 +166,7 @@ twilioController.addParticipant = async (req, res) => {
 twilioController.joinConference = async (req, res) => {
   console.log("In twilioController.joinConference");
   const phoneNumber = req.body.Digits;
-  const participantCount = parseInt(req.query.participantCount, 10) || 1;
+  const participantCount = parseInt(req.query.participantCount, 10)
   const conferenceName = req.query.conferenceName; // Use existing conference name
   const username = req.query.username;
   const ownerCallSid = req.query.ownerCallSid;
@@ -177,7 +180,7 @@ twilioController.joinConference = async (req, res) => {
   const twimlCaller = new VoiceResponse();
   twimlCaller.say(`Please wait while we call.`);
   twimlCaller.dial().conference({
-    startConferenceOnEnter: true,
+    startConferenceOnEnter: false,
     endConferenceOnExit: true,
     waitUrl: '', // No hold music for the moderator, allows direct joining
   }, conferenceName);
@@ -195,10 +198,10 @@ twilioController.joinConference = async (req, res) => {
   }, conferenceName);
 
   client.calls.create({
-    url: `${process.env.SERVER_ADDRESS}/api/joinConferenceCall?conferenceName=${conferenceName}`,
+    url: `${process.env.SERVER_ADDRESS}/api/joinConferenceCall?conferenceName=${conferenceName}&username=${encodeURIComponent(username)}`,
     to: phoneNumber,
     from: process.env.TWILIO_PHONE_NUMBER,
-    statusCallback: `${process.env.SERVER_ADDRESS}/api/calleeJoined?ownerCallSid=${ownerCallSid}&conferenceName=${conferenceName}`,
+    statusCallback: `${process.env.SERVER_ADDRESS}/api/calleeJoined?ownerCallSid=${encodeURIComponent(ownerCallSid)}&conferenceName=${conferenceName}&participantCount=${participantCount}`,
     statusCallbackEvent: ['answered'],
     statusCallbackMethod: 'POST'
   }).then(call => {
@@ -210,15 +213,19 @@ twilioController.joinConference = async (req, res) => {
 
 twilioController.joinConferenceCall = async (req, res) => {
   const conferenceName = req.query.conferenceName; // Retrieve the conference name from the query
+  const username = req.query.username; // Get the moderator's name
 
   console.log(`Joining participant to conference: ${conferenceName}`);
 
   const twiml = new VoiceResponse();
+
+  // Announce the moderator's name before joining
+  twiml.say(`You have been added to a conference call by ${username}.`);
   
   // Dial into the conference
   twiml.dial().conference({
-    startConferenceOnEnter: true, // Participant joins the conference immediately
-    endConferenceOnExit: false,   // Keep conference active even if this participant leaves
+    startConferenceOnEnter: false, // Keeps participant in waiting room until moderator starts
+    endConferenceOnExit: false,    // Conference stays active even if this participant leaves
   }, conferenceName);
 
   // Send the TwiML response to Twilio
@@ -227,24 +234,23 @@ twilioController.joinConferenceCall = async (req, res) => {
 };
 
 
-
-
 twilioController.calleeJoined = async (req, res) => {
   console.log("in CalleeJoined")
-  const { ownerCallSid, conferenceName } = req.query; // Extract conference context and owner SID from query parameters
+  const conferenceName = req.query.conferenceName; // Use existing conference name
+  const ownerCallSid = req.query.ownerCallSid;
   const calleePhoneNumber = req.body.To; // Callee's phone number
+  const participantCount = parseInt(req.query.participantCount, 10);
 
   try {
     // Retrieve participant count and username dynamically from your data source or database
     const user = await User.findOne({ phone: req.body.From.replace(/^\+1/, '') });
-    const participantCount = user ? user.transcriptions.length + 1 : 1; // Adjust count based on existing transcriptions or fallback to 1
     const username = user ? user.name.split(' ')[0] : 'User'; // Default username if none found
 
     // Construct TwiML to notify the owner
     const twiml = new VoiceResponse();
-    twiml.say(`${calleePhoneNumber} has joined the call. Press 1 to add another caller or any other key to proceed with recording.`);
+    twiml.say(`Someone has joined the call. Press 1 to add another caller or any other key to proceed with recording.`);
     twiml.gather({
-      action: `/api/addParticipant?participantCount=${participantCount}&username=${encodeURIComponent(username)}&conferenceName=${encodeURIComponent(conferenceName)}`,
+      action: `/api/addParticipant?participantCount=${participantCount}&username=${encodeURIComponent(username)}&conferenceName=${encodeURIComponent(conferenceName)}&ownerCallSid=${encodeURIComponent(ownerCallSid)}`,
       method: 'POST',
       numDigits: 1,
       timeout: 5
