@@ -65,6 +65,8 @@ app.post('/api/subject', twilioController.handleSubject);
 app.post('/api/addParticipant', twilioController.addParticipant);
 app.post('/api/joinConference', twilioController.joinConference);
 app.post('/api/joinConferenceCall', twilioController.joinConferenceCall);
+app.post('/api/calleeJoined', twilioController.calleeJoined);
+
 app.post('/api/startRecording', twilioController.startRecording);
 app.post('/api/twilioTranscription', 
   twilioController.handleTranscription, 
