@@ -257,8 +257,8 @@ twilioController.calleeJoined = async (req, res) => {
     });
 
     // Update the owner's call with the new TwiML
-    await client.calls(ownerCallSid)
-      .update({ twiml: twiml.toString() });
+    res.type('text/xml');
+    res.send(twiml.toString());
 
     console.log(`Notified owner that ${calleePhoneNumber} has joined the call in conference ${conferenceName}.`);
     res.sendStatus(200);
